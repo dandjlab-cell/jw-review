@@ -546,6 +546,7 @@ function paintRow() {
   const videoEl = $("#video-el");
   if (videoFid) {
     videoEl.src = api.url(`/api/drive-video/${videoFid}?t=${encodeURIComponent(api.token || "")}`);
+    videoEl.load();  // required after src change to actually fetch
   } else {
     videoEl.removeAttribute("src");
     videoEl.load();  // reset media element
