@@ -844,7 +844,12 @@ async function patchSheetField(field, value) {
   setPip("saving", "saving");
   try {
     if (FIELD_TO_SHEET_COL.hasOwnProperty(field)) {
-      await api.patchRow(state.year, state.selectedPid, { [field]: value });
+      const header = FIELD_TO_HEADER[field];
+      const action = DROPDOWN_FIELDS.has(field) ? "dropdown_change" : "recipe_save_blur";
+      await api.patchRow(state.year, state.selectedPid, {
+        updates: [{ header, value: String(value) }],
+        action,
+      });
     }
     // After PATCH we still post draft to update KV view of the recipe.
     await api.saveDraft(state.year, state.selectedPid, state.recipe);
@@ -874,6 +879,34 @@ const FIELD_TO_SHEET_COL = {
   site: "O", sponsoring_brand: "P", talent_name: "Q", talent_presence: "R",
   tour_city: "S", has_srt: "V", review_status: "A",
 };
+
+// Worker contract (parsePatchBody in routes/rows.ts) requires CANONICAL_HEADERS.
+const FIELD_TO_HEADER = {
+  title: "Title",
+  thumbnail_title: "Thumbnail Title",
+  description: "Description",
+  tags: "Tags",
+  branded: "Branded",
+  category: "Category",
+  duration: "Duration",
+  format: "Format",
+  orientation: "Orientation",
+  recipe_category: "Recipe_Category",
+  seasonal: "Seasonal",
+  series: "Series",
+  site: "Site",
+  sponsoring_brand: "Sponsoring_Brand",
+  talent_name: "Talent_Name",
+  talent_presence: "Talent_Presence",
+  tour_city: "Tour_City",
+  has_srt: "Has SRT",
+  review_status: "Review Status",
+};
+
+const DROPDOWN_FIELDS = new Set([
+  "review_status", "site", "branded", "format", "category", "duration",
+  "orientation", "recipe_category", "seasonal", "talent_presence", "has_srt",
+]);
 
 function saveDraftAndScheduleRender({ action, immediateRender = false }) {
   persistLocalDraft();
