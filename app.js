@@ -193,7 +193,7 @@ const state = {
   year: 2026,
   rows: [],            // [{ pid, title, thumb_fid, duration, format, push_status, review_status, brand }]
   rowIndex: new Map(), // pid → row
-  filters: { status: new Set(["Ready"]), brand: new Set(["Kitchn", "AT"]), format: new Set(["Recipe", "House Tour", "Compilation", "How To"]) },
+  filters: { status: new Set(["Ready", "Hold", "Uploaded", "Excluded"]), brand: new Set(["Kitchn", "AT"]), format: new Set(["Recipe", "House Tour", "Compilation", "How To"]) },
   search: "",
   selectedPid: null,
   currentRow: null,    // detailed row payload from /api/rows/:y/:p
