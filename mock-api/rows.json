@@ -1,0 +1,85 @@
+{
+  "rows": [
+    {
+      "pid": "2603K016",
+      "title": "How to Make Butter Flights",
+      "thumb_fid": null,
+      "duration": "0:54",
+      "format": "Recipe",
+      "brand": "Kitchn",
+      "push_status": "Ready",
+      "review_status": "Pending",
+      "talent_name": "Hippo Wong"
+    },
+    {
+      "pid": "2603K010",
+      "title": "Carlota De Queso y Limón (Lemon Icebox Cake)",
+      "thumb_fid": null,
+      "duration": "1:12",
+      "format": "Recipe",
+      "brand": "Kitchn",
+      "push_status": "Ready",
+      "review_status": "Pending"
+    },
+    {
+      "pid": "2602K014",
+      "title": "Ice Cream vs. Gelato: The Real Difference",
+      "thumb_fid": null,
+      "duration": "1:24",
+      "format": "Recipe",
+      "brand": "Kitchn",
+      "push_status": "Ready",
+      "review_status": "Reviewed"
+    },
+    {
+      "pid": "2602K005",
+      "title": "Splurge or Save: Wings",
+      "thumb_fid": null,
+      "duration": "0:45",
+      "format": "Compilation",
+      "brand": "Kitchn",
+      "push_status": "Ready",
+      "review_status": "Pending"
+    },
+    {
+      "pid": "2601K001",
+      "title": "How to Make One-Pan Meatballs and Rice",
+      "thumb_fid": null,
+      "duration": "1:02",
+      "format": "Recipe",
+      "brand": "Kitchn",
+      "push_status": "Ready",
+      "review_status": "Approved"
+    },
+    {
+      "pid": "2602AT001",
+      "title": "Inside Priya Gopi's Cat-Centric Brooklyn Apartment",
+      "thumb_fid": null,
+      "duration": "1:48",
+      "format": "House Tour",
+      "brand": "AT",
+      "push_status": "Ready",
+      "review_status": "Pending"
+    },
+    {
+      "pid": "2601AT001",
+      "title": "Inside Natalia Florez's 430-Square-Foot Cali Apartment",
+      "thumb_fid": null,
+      "duration": "1:32",
+      "format": "House Tour",
+      "brand": "AT",
+      "push_status": "Ready",
+      "review_status": "Pending"
+    },
+    {
+      "pid": "2602AT002",
+      "title": "Black History Month Home Tour Compilation",
+      "thumb_fid": null,
+      "duration": "0:58",
+      "format": "Compilation",
+      "brand": "AT",
+      "push_status": "Hold: needs reframe",
+      "review_status": "Rejected"
+    }
+  ]
+}

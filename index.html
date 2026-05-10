@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>JW Review · AT/Kitchn JW archive</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ========== TOP BAR ========== -->
+<header class="topbar">
+  <h1 class="serif" id="topbar-title">JW Seed 2026</h1>
+  <input class="search" id="search-input" placeholder="⌕  Search title, talent, project number…" autocomplete="off">
+  <div class="meta" id="progress-meta">– / – reviewed</div>
+  <div class="bar"><div id="progress-fill" style="width: 0%"></div></div>
+  <div class="meta soft topbar-keys">
+    <span class="keyhint">J</span><span class="keyhint">K</span> nav ·
+    <span class="keyhint">A</span> approve ·
+    <span class="keyhint">/</span> search
+  </div>
+  <a class="topbar-link" href="#" id="activity-link" title="Global activity feed">Activity ↗</a>
+  <button class="topbar-icon-btn" id="settings-btn" title="Reviewer / Worker URL / Token">⚙</button>
+</header>
+
+<!-- ========== MAIN LAYOUT ========== -->
+<div class="layout">
+
+  <!-- ========== LEFT: filter + list ========== -->
+  <aside class="leftpane">
+    <div class="filter-block">
+      <h2>Push Status</h2>
+      <div class="filter-pills" data-filter-group="status" id="filter-status">
+        <span class="mini" data-value="Ready">Ready<span class="num"></span></span>
+        <span class="mini" data-value="Hold">Hold<span class="num"></span></span>
+        <span class="mini" data-value="Uploaded">Uploaded<span class="num"></span></span>
+        <span class="mini" data-value="Excluded">Excluded<span class="num"></span></span>
+      </div>
+    </div>
+    <div class="filter-block">
+      <h2>Brand (Site)</h2>
+      <div class="filter-pills" data-filter-group="brand" id="filter-brand">
+        <span class="mini" data-value="Kitchn">Kitchn<span class="num"></span></span>
+        <span class="mini" data-value="AT">AT<span class="num"></span></span>
+      </div>
+    </div>
+    <div class="filter-block">
+      <h2>Format</h2>
+      <div class="filter-pills" data-filter-group="format" id="filter-format">
+        <span class="mini" data-value="Recipe">Recipe<span class="num"></span></span>
+        <span class="mini" data-value="House Tour">House Tour<span class="num"></span></span>
+        <span class="mini" data-value="Compilation">Compilation<span class="num"></span></span>
+        <span class="mini" data-value="How To">How To<span class="num"></span></span>
+      </div>
+    </div>
+
+    <div class="row-list" id="row-list">
+      <div class="row-list-empty">Loading rows…</div>
+    </div>
+  </aside>
+
+  <!-- ========== CENTER: hierarchy ========== -->
+  <main class="center" id="center">
+    <div class="center-empty" id="center-empty">
+      <div class="center-empty-inner">
+        <div class="center-empty-title">No row selected</div>
+        <div class="center-empty-meta">Pick a row from the left, or change filters.</div>
+      </div>
+    </div>
+
+    <div class="center-content" id="center-content" hidden>
+
+      <div class="center-head">
+        <div>
+          <div class="pid" id="row-pid">–</div>
+          <h2 class="serif" id="row-title">–</h2>
+          <div class="meta-line" id="row-meta">–</div>
+        </div>
+        <div class="actions">
+          <button class="btn approve" data-action="approve">✓ Approve &amp; Push to JW</button>
+          <button class="btn fix" data-action="fix">⚠ Fix</button>
+          <button class="btn exclude" data-action="exclude">✕ Exclude</button>
+        </div>
+      </div>
+
+      <!-- TOP ROW: Video + picked thumbnail + title editor -->
+      <div class="top-row">
+        <div class="primary" id="primary-video">
+          <img id="video-poster" alt="">
+          <div class="play-btn">▶</div>
+          <div class="duration" id="video-duration">–</div>
+          <div class="scrub"><div></div></div>
+          <div class="label-overlay">▶ Video</div>
+        </div>
+
+        <div class="pair-card">
+          <div class="label">
+            Picked Thumbnail
+            <button class="history-btn" id="history-btn" title="History">⟲ History</button>
+          </div>
+          <div class="image" id="picked-thumb-box">
+            <img id="picked-thumb-img" alt="">
+            <div class="picked-overlay" id="picked-overlay">
+              <img class="template-png" id="overlay-png" alt="" hidden>
+              <div class="overlay-title js-title" id="overlay-title-text"></div>
+            </div>
+            <div class="picked-overlay-meta" id="picked-overlay-meta">– pt / – lines</div>
+            <div class="status-pip" id="status-pip" data-state="idle"><span class="pip-icon">●</span><span class="pip-label">idle</span></div>
+            <div class="approximate-banner" id="approximate-banner" hidden>⚡ approximate · canvas fallback</div>
+          </div>
+        </div>
+
+        <div class="editor-and-picker">
+          <div class="title-editor">
+            <div class="row">
+              <label for="thumb-title-input">Thumbnail Title</label>
+              <input id="thumb-title-input" autocomplete="off">
+            </div>
+            <div class="hint">Live preview uses your input as you type. Saved on blur.</div>
+          </div>
+
+          <!-- External links -->
+          <div class="links-row" id="links-row">
+            <a class="link-pill" data-key="drive_folder">📁 Drive folder</a>
+            <a class="link-pill" data-key="video_asset">🎬 Video file</a>
+            <a class="link-pill" data-key="hero_file">🖼 Hero file</a>
+            <a class="link-pill" data-key="thumbnails_asset">🖼 Thumbnail file</a>
+            <a class="link-pill" data-key="captions_asset">📝 Captions (SRT)</a>
+            <a class="link-pill" data-key="jw_dashboard">▶ JW dashboard</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- CANDIDATE PICKER -->
+      <div class="tertiary">
+        <div class="tertiary-head">
+          <h3>Pick a thumbnail</h3>
+          <div class="meta" id="candidates-meta">– candidates · Gemini-ranked</div>
+        </div>
+        <div class="picker-strip" id="candidate-strip">
+          <div class="picker-empty">Loading candidates…</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ========== RIGHT: editable params ========== -->
+  <aside class="rightpane" id="rightpane" hidden>
+    <div>
+      <h3>Editorial</h3>
+      <div class="field-r" style="margin-bottom: 8px;">
+        <label>Title</label>
+        <input data-field="title" autocomplete="off">
+      </div>
+      <div class="field-r" style="margin-bottom: 8px;">
+        <label>Description</label>
+        <textarea data-field="description"></textarea>
+      </div>
+      <div class="field-r">
+        <label>Tags</label>
+        <div class="tags-edit" id="tags-edit" data-field="tags">
+          <input class="tag-add" placeholder="add tag, press Enter" id="tag-add-input">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3>JW custom_params</h3>
+      <div class="params-grid">
+        <div class="field-r"><label>Site</label>
+          <select data-field="site">
+            <option value="">—</option>
+            <option>The Kitchn</option>
+            <option>Apartment Therapy</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Branded</label>
+          <select data-field="branded"><option value="">—</option><option>No</option><option>Yes</option></select>
+        </div>
+        <div class="field-r"><label>Format</label>
+          <select data-field="format">
+            <option value="">—</option>
+            <option>Recipe</option><option>House Tour</option><option>Compilation</option><option>How To</option><option>DIY</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Category</label>
+          <select data-field="category">
+            <option value="">—</option>
+            <option>Recipe</option><option>Tours</option><option>How To</option><option>DIY</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Duration</label>
+          <select data-field="duration">
+            <option value="">—</option>
+            <option>Under 2 Min</option><option>2-5 Min</option><option>5+ Min</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Orientation</label>
+          <select data-field="orientation">
+            <option value="">—</option><option>Vertical</option><option>Horizontal</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Recipe_Cat</label>
+          <select data-field="recipe_category">
+            <option value="">—</option>
+            <option>Snacks &amp; Sides</option><option>Mains</option><option>Desserts</option><option>Drinks</option><option>Breakfast</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Seasonal</label>
+          <select data-field="seasonal">
+            <option value="">—</option><option>Spring</option><option>Summer</option><option>Fall</option><option>Winter</option><option>Holiday</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Series</label><input data-field="series" autocomplete="off"></div>
+        <div class="field-r"><label>Sponsor</label><input data-field="sponsoring_brand" autocomplete="off"></div>
+        <div class="field-r"><label>Talent</label><input data-field="talent_name" autocomplete="off"></div>
+        <div class="field-r"><label>Talent_Pres</label>
+          <select data-field="talent_presence">
+            <option value="">—</option>
+            <option>Talent Hosted</option><option>Hands Only</option><option>No Host</option>
+          </select>
+        </div>
+        <div class="field-r"><label>Tour_City</label><input data-field="tour_city" autocomplete="off"></div>
+        <div class="field-r"><label>Has SRT</label>
+          <select data-field="has_srt">
+            <option value="">—</option><option>Yes</option><option>No</option>
+          </select>
+        </div>
+        <div class="field-r grid-span-2"><label>Review Status</label>
+          <select data-field="review_status">
+            <option value="">—</option>
+            <option>Pending</option><option>Reviewed</option><option>Approved</option><option>Rejected</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ========== HISTORY SIDE PANEL ========== -->
+<aside class="history-panel" id="history-panel" hidden>
+  <div class="history-panel-head">
+    <div>History</div>
+    <button class="history-close" id="history-close">✕</button>
+  </div>
+  <div class="history-panel-body" id="history-panel-body">
+    <div class="history-empty">No history yet for this row.</div>
+  </div>
+</aside>
+
+<!-- ========== SETTINGS / FIRST-RUN MODAL ========== -->
+<div class="modal-backdrop" id="settings-modal" hidden>
+  <div class="modal">
+    <h2 class="serif">Reviewer setup</h2>
+    <p class="modal-sub">Stored locally. Sent on every Worker request as <code>X-JW-User</code> + <code>X-JW-Token</code>.</p>
+    <div class="modal-field">
+      <label for="modal-reviewer">Your name</label>
+      <input id="modal-reviewer" placeholder="e.g. dan or karis" autocomplete="off">
+      <div class="modal-hint">One word is fine. Used in the audit log.</div>
+    </div>
+    <div class="modal-field">
+      <label for="modal-worker-url">Worker URL</label>
+      <input id="modal-worker-url" placeholder="https://jw-review-worker.dandjlab.workers.dev" autocomplete="off">
+      <div class="modal-hint">Base URL of the Cloudflare Worker. Use <code>./mock-api</code> for offline browsing.</div>
+    </div>
+    <div class="modal-field">
+      <label for="modal-token">X-JW-Token</label>
+      <input id="modal-token" placeholder="shared secret" type="password" autocomplete="off">
+      <div class="modal-hint">Same-as-QC pattern. Ask Dan for the value.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="modal-cancel">Cancel</button>
+      <button class="btn approve" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== FIX REASON DIALOG ========== -->
+<div class="modal-backdrop" id="fix-modal" hidden>
+  <div class="modal modal-small">
+    <h2 class="serif">Fix this row</h2>
+    <p class="modal-sub">Sets Review Status = Rejected, Push Status = Hold: &lt;reason&gt;.</p>
+    <div class="modal-field">
+      <label for="fix-reason">Reason</label>
+      <input id="fix-reason" placeholder="e.g. wrong talent, blurry hero" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="fix-cancel">Cancel</button>
+      <button class="btn fix" id="fix-confirm">Mark as Fix</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TOAST ========== -->
+<div class="toast" id="toast" hidden></div>
+
+<!-- ========== KEYBOARD HELP OVERLAY ========== -->
+<div class="modal-backdrop" id="help-modal" hidden>
+  <div class="modal">
+    <h2 class="serif">Shortcuts</h2>
+    <table class="kbd-table">
+      <tr><td><span class="keyhint">J</span> / <span class="keyhint">↓</span></td><td>Next row</td></tr>
+      <tr><td><span class="keyhint">K</span> / <span class="keyhint">↑</span></td><td>Previous row</td></tr>
+      <tr><td><span class="keyhint">A</span></td><td>Approve current row</td></tr>
+      <tr><td><span class="keyhint">X</span></td><td>Exclude current row</td></tr>
+      <tr><td><span class="keyhint">/</span></td><td>Focus search</td></tr>
+      <tr><td><span class="keyhint">?</span></td><td>This help</td></tr>
+      <tr><td><span class="keyhint">Esc</span></td><td>Close any panel/dialog</td></tr>
+    </table>
+    <div class="modal-actions">
+      <button class="btn approve" id="help-close">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

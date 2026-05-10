@@ -1,0 +1,10 @@
+{
+  "candidates": [
+    { "file_id": "mock_2603K016_c01", "gemini_rank": 1, "gemini_score": 0.94 },
+    { "file_id": "mock_2603K016_c02", "gemini_rank": 2, "gemini_score": 0.91 },
+    { "file_id": "mock_2603K016_c03", "gemini_rank": 3, "gemini_score": 0.86 },
+    { "file_id": "mock_2603K016_c04", "gemini_rank": 4, "gemini_score": 0.81 },
+    { "file_id": "mock_2603K016_c05", "gemini_rank": 5, "gemini_score": 0.74 },
+    { "file_id": "mock_2603K016_c06", "gemini_rank": 6, "gemini_score": 0.62 }
+  ]
+}
