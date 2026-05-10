@@ -172,7 +172,7 @@ class ApiClient {
   getRow(year, pid)         { return this.request(`/api/rows/${year}/${pid}`); }
   patchRow(year, pid, body) { return this.request(`/api/rows/${year}/${pid}`, { method: "PATCH", body }); }
   candidates(year, pid)     { return this.request(`/api/candidates/${year}/${pid}`); }
-  driveImageUrl(fid, role)  { return this.url(`/api/drive-image/${fid}?role=${role || "other"}`); }
+  driveImageUrl(fid, role)  { return this.url(`/api/drive-image/${fid}?role=${role || "other"}&t=${encodeURIComponent(this.token || "")}`); }
   saveDraft(year, pid, recipe)  { return this.request(`/api/draft/${year}/${pid}`,  { method: "POST", body: { recipe } }); }
   triggerRender(year, pid, body) { return this.request(`/api/render/${year}/${pid}`, { method: "POST", body }); }
   uploadFallback(year, pid, blob){ return this.request(`/api/render-fallback/${year}/${pid}`, { method: "POST", body: blob }); }
