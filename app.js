@@ -508,6 +508,23 @@ function normalizeSiteToBrand(site) {
   return site;
 }
 
+// Mirror of Worker sheets.ts:extractDriveFileId. Returns "" if no Drive id
+// recognizable in URL. Used to pull the video file id from `video_asset_url`.
+function extractDriveFileIdClient(url) {
+  if (!url) return "";
+  const REs = [
+    /\/file\/d\/([a-zA-Z0-9_-]{16,})/,
+    /\/folders\/([a-zA-Z0-9_-]{16,})/,
+    /[?&]id=([a-zA-Z0-9_-]{16,})/,
+    /\/d\/([a-zA-Z0-9_-]{16,})/,
+  ];
+  for (const re of REs) {
+    const m = re.exec(url);
+    if (m) return m[1];
+  }
+  return "";
+}
+
 function paintRow() {
   const row = state.currentRow || {};
   const recipe = state.recipe;
@@ -521,12 +538,17 @@ function paintRow() {
     row.jw_id ? `jw_id: ${row.jw_id}` : null,
   ].filter(Boolean).join(" · ");
 
-  // Video
+  // Video — Worker-proxied Drive bytes via /api/drive-video. Same auth model
+  // as /api/drive-image: shared token via ?t=, no per-user Drive sharing
+  // needed (Worker streams via Dan's OAuth server-side).
   $("#video-duration").textContent = row.duration || "–";
-  if (row.candidate_fid || recipe.candidate_fid) {
-    $("#video-poster").src = api.driveImageUrl(recipe.candidate_fid || row.candidate_fid, "hero");
+  const videoFid = extractDriveFileIdClient(row.video_asset_url || row.video_asset || "");
+  const videoEl = $("#video-el");
+  if (videoFid) {
+    videoEl.src = api.url(`/api/drive-video/${videoFid}?t=${encodeURIComponent(api.token || "")}`);
   } else {
-    $("#video-poster").removeAttribute("src");
+    videoEl.removeAttribute("src");
+    videoEl.load();  // reset media element
   }
 
   // Picked thumbnail base
