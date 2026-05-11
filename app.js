@@ -883,12 +883,12 @@ async function loadCandidates(pid, token) {
 }
 
 // Partition state.candidates into:
-//   primary  — the trusted ranked set (pro source only; one rank per number)
-//   alts     — everything else (flash, other extracts, cloudinary)
-// Primary always shows; alts hide behind a "Show N more" toggle.
+//   primary  — Gemini-ranked (pro source only)
+//   alts     — Cloudinary brand-curated thumbs (hidden behind Show more)
+// Flash + raw extracts are intentionally excluded; reviewers don't need them.
 function partitionCandidates() {
   const primary = state.candidates.filter(c => c.source === "pro");
-  const alts    = state.candidates.filter(c => c.source !== "pro");
+  const alts    = state.candidates.filter(c => c.source === "cloudinary");
   return { primary, alts };
 }
 
@@ -908,15 +908,11 @@ function paintCandidates() {
   if (pickedInAlts) state.candidatesAltsExpanded = true;
   const showAlts = !!state.candidatesAltsExpanded;
 
-  // Meta line — clear about what's in primary vs alts.
-  const altCounts = alts.reduce((m, c) => ((m[c.source] = (m[c.source] || 0) + 1), m), {});
-  const altParts = [];
-  if (altCounts.flash) altParts.push(`${altCounts.flash} Flash`);
-  if (altCounts.cloudinary) altParts.push(`${altCounts.cloudinary} Cloudinary`);
-  if (altCounts.extract) altParts.push(`${altCounts.extract} extract`);
-  const parts = [`${state.candidates.length} candidates`];
+  // Meta line.
+  const visibleTotal = primary.length + alts.length;
+  const parts = [`${visibleTotal} candidates`];
   if (primary.length) parts.push(`${primary.length} Gemini-ranked`);
-  if (altParts.length) parts.push(altParts.join(" + ") + " alt");
+  if (alts.length) parts.push(`${alts.length} Cloudinary`);
   meta.textContent = parts.join(" · ");
 
   const renderOne = (c) => {
@@ -928,15 +924,10 @@ function paintCandidates() {
     });
     elt.append(el("img", { src: api.driveImageUrl(c.file_id, "candidate"), loading: "lazy", alt: "" }));
     if (isPicked) elt.append(el("div", { class: "badge-mini" }, "Picked"));
-    // Only show #N rank for primary (pro) — collisions with flash #N are confusing.
     if (c.source === "pro" && c.gemini_rank != null) {
       elt.append(el("div", { class: "gemini-rank" }, `#${c.gemini_rank}`));
     } else if (c.source === "cloudinary") {
       elt.append(el("div", { class: "gemini-rank cloudinary-tag" }, "Cloudinary"));
-    } else if (c.source === "flash") {
-      elt.append(el("div", { class: "gemini-rank flash-tag" }, "Flash"));
-    } else if (c.source === "extract") {
-      elt.append(el("div", { class: "gemini-rank extract-tag" }, "Extract"));
     }
     return elt;
   };
