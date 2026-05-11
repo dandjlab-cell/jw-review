@@ -245,6 +245,8 @@ const PERF = {
     hud.innerHTML = rows.map(([k, v]) => `<div>${k}: ${Math.round(v - t0)} ms</div>`).join("");
   },
 };
+// Expose for DevTools / external diagnostics. Safe — read-only inspection.
+window.__PERF = PERF;
 
 /* ─────────────────────── Routing (hash-based) ───────────────────────
    We use hash routing (#/2026/2603K016) for GitHub Pages compatibility —
