@@ -1541,4 +1541,10 @@ async function boot() {
   setInterval(paintProgress, POLL_PROGRESS_MS);
 }
 
-document.addEventListener("DOMContentLoaded", boot);
+// DOMContentLoaded has likely already fired (we're loaded dynamically with
+// a cache-busting query string after body parse). If so, boot immediately.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}
