@@ -769,14 +769,55 @@ function paintOverlayPng() {
   const key = `${state.recipe.brand || ""}|${state.recipe.format || ""}`;
   const overlay = OVERLAY_MAP[key];
   const img = $("#overlay-png");
+  const isHT3field = (state.recipe.brand === "AT" && state.recipe.format === "House Tour");
   if (overlay) {
     img.src = overlay;
     img.hidden = false;
-    $("#overlay-title-text").style.visibility = "visible";
+    // AT House Tour uses a 3-field layout (LOCATION/SIZE/HOME TYPE) instead of a
+    // single centered title. Hide the centered title; render 3 split values.
+    $("#overlay-title-text").style.visibility = isHT3field ? "hidden" : "visible";
+    $("#overlay-ht-fields").hidden = !isHT3field;
   } else {
     img.hidden = true;
     img.removeAttribute("src");
     $("#overlay-title-text").style.visibility = "hidden";
+    $("#overlay-ht-fields").hidden = true;
+  }
+  if (isHT3field) paintHouseTourFields();
+}
+
+/* Split `<location> · <size> · <home_type>` into the three positioned fields.
+   Auto-shrink ALL three to the same font size so they share a baseline (same
+   behaviour as the Modal PIL renderer). */
+function paintHouseTourFields() {
+  const box = $("#picked-thumb-box");
+  const containerH = box?.clientHeight || 0;
+  if (!containerH) return;
+  // 41pt @ 1920px canvas → scale to container.
+  const basePx = (41 * containerH) / 1920;
+  const minPx = (28 * containerH) / 1920;
+  const title = (state.recipe.thumbnail_title || "").replace(/\r\n/g, "\n");
+  const parts = title.split(/\s*·\s*/);
+  while (parts.length < 3) parts.push("");
+  const [loc, size, home] = parts;
+  const setValue = (col, val) => {
+    const el = $(`#overlay-ht-fields [data-col="${col}"]`);
+    if (!el) return;
+    el.textContent = val || "";
+    el.style.fontSize = basePx + "px";
+  };
+  setValue("location", loc);
+  setValue("size", size);
+  setValue("home_type", home);
+  // Shrink-to-fit: each field must not overflow its column width. Find the
+  // largest size that works for all three (uniform sizing like Modal).
+  let px = basePx;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const allEls = ["location", "size", "home_type"].map(c => $(`#overlay-ht-fields [data-col="${c}"]`));
+    const overflow = allEls.some(el => el && el.scrollWidth > el.clientWidth + 1);
+    if (!overflow || px <= minPx) break;
+    px = Math.max(minPx, px - 2);
+    allEls.forEach(el => { if (el) el.style.fontSize = px + "px"; });
   }
 }
 

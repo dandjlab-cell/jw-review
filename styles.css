@@ -326,6 +326,25 @@ a { color: var(--ink); text-decoration: none; }
   font-size: 0.85em;
 }
 
+/* AT House Tour 3-field overlay. Positions extracted from
+   at-vert-thumbnail-home-tour-may7.ai via PyMuPDF (see methodology doc).
+   x/y/width are % of the 1080×1920 canvas. */
+.overlay-ht-fields {
+  position: absolute; inset: 0; pointer-events: none;
+}
+.overlay-ht-value {
+  position: absolute;
+  font-family: "FreightText Pro", "Charter", "Iowan Old Style", Georgia, serif;
+  font-weight: 300;     /* Light — matches Illustrator template */
+  color: #181820;
+  white-space: nowrap;
+  line-height: 1;
+  /* JS sets font-size dynamically based on container height (41pt @ 1920). */
+}
+.overlay-ht-value[data-col="location"]  { left: 10.14%; top: 88.68%; width: 25.37%; }
+.overlay-ht-value[data-col="size"]      { left: 43.02%; top: 88.60%; width: 15.83%; }
+.overlay-ht-value[data-col="home_type"] { left: 69.85%; top: 88.40%; width: 17.78%; }
+
 /* Source-specific badges on alternates (Cloudinary, Flash, Extract). Each gets
    its own muted color so reviewer can tell them apart at a glance. */
 .picker-strip .gemini-rank.cloudinary-tag { background: rgba(60, 80, 180, 0.85); }
