@@ -364,7 +364,10 @@ a { color: var(--ink); text-decoration: none; }
   position: relative;
 }
 .pair-card .image img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pair-card .image #picked-thumb-img { position: absolute; inset: 0; }
+.pair-card .image #picked-thumb-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Hide the broken-image glyph when no src is set (between rows / before first pick). */
+.pair-card .image #picked-thumb-img:not([src]),
+.pair-card .image #picked-thumb-img[src=""] { display: none; }
 
 .history-btn {
   background: transparent;
