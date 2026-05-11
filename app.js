@@ -830,7 +830,8 @@ function fitOverlayText() {
     const naturalH = titleEl.scrollHeight;
     const lineH = parseFloat(getComputedStyle(titleEl).lineHeight) || (scaleToPx(pt) * 1.05);
     const lines = Math.max(1, Math.round(naturalH / lineH));
-    const fits = naturalH <= titleEl.clientHeight + 1 && lines <= 2;
+    // Allow up to 3 lines — users can force breaks via Enter (textarea \n).
+    const fits = naturalH <= titleEl.clientHeight + 1 && lines <= 3;
     if (fits) {
       chosenPt = pt;
       chosenLines = lines;
@@ -1186,19 +1187,25 @@ function drawCover(ctx, img, W, H) {
 }
 
 function drawWrappedText(ctx, text, cx, cy, maxW, lineH) {
-  const words = text.split(/\s+/);
+  // Respect user-supplied \n as hard breaks; within each chunk, word-wrap to maxW.
+  const userChunks = String(text).split(/\r?\n/);
   const lines = [];
-  let line = "";
-  for (const w of words) {
-    const test = line ? line + " " + w : w;
-    if (ctx.measureText(test).width > maxW && line) {
-      lines.push(line);
-      line = w;
-    } else {
-      line = test;
+  for (const chunk of userChunks) {
+    const trimmed = chunk.trim();
+    if (!trimmed) { lines.push(""); continue; }
+    const words = trimmed.split(/\s+/);
+    let line = "";
+    for (const w of words) {
+      const test = line ? line + " " + w : w;
+      if (ctx.measureText(test).width > maxW && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
     }
+    if (line) lines.push(line);
   }
-  if (line) lines.push(line);
   const startY = cy - ((lines.length - 1) * lineH) / 2;
   lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineH));
 }

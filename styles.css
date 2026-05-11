@@ -399,6 +399,26 @@ a { color: var(--ink); text-decoration: none; }
   word-break: break-word;
   hyphens: none;
   padding: 0;
+  /* Respect user-typed line breaks (\n in textarea) AND still soft-wrap long lines. */
+  white-space: pre-wrap;
+}
+
+/* Thumbnail Title is a textarea so users can force line breaks with Enter. */
+#thumb-title-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 2.4em;
+  line-height: 1.35;
+  font: inherit;
+  padding: 6px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  color: var(--ink);
+}
+#thumb-title-input:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .picked-overlay-meta {
