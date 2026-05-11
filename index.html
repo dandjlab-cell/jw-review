@@ -251,26 +251,25 @@
 <!-- ========== SETTINGS / FIRST-RUN MODAL ========== -->
 <div class="modal-backdrop" id="settings-modal" hidden>
   <div class="modal">
-    <h2 class="serif">Reviewer setup</h2>
-    <p class="modal-sub">Stored locally. Sent on every Worker request as <code>X-JW-User</code> + <code>X-JW-Token</code>.</p>
+    <h2 class="serif">JW Review</h2>
+    <p class="modal-sub">Enter the access password to continue.</p>
     <div class="modal-field">
-      <label for="modal-reviewer">Your name</label>
-      <input id="modal-reviewer" placeholder="e.g. dan or karis" autocomplete="off">
-      <div class="modal-hint">One word is fine. Used in the audit log.</div>
+      <label for="modal-token">Password</label>
+      <input id="modal-token" placeholder="••••••••" type="password" autocomplete="current-password">
     </div>
     <div class="modal-field">
-      <label for="modal-worker-url">Worker URL</label>
-      <input id="modal-worker-url" placeholder="https://jw-review-worker.dandjlab.workers.dev" autocomplete="off">
-      <div class="modal-hint">Base URL of the Cloudflare Worker. Use <code>./mock-api</code> for offline browsing.</div>
+      <label for="modal-reviewer">Your name <span class="modal-hint-inline">(optional — used in audit log)</span></label>
+      <input id="modal-reviewer" placeholder="e.g. Karis" autocomplete="off">
     </div>
-    <div class="modal-field">
-      <label for="modal-token">X-JW-Token</label>
-      <input id="modal-token" placeholder="shared secret" type="password" autocomplete="off">
-      <div class="modal-hint">Same-as-QC pattern. Ask Dan for the value.</div>
+    <!-- Advanced: Worker URL override, hidden by default. Power users (Dan) can
+         show this via DevTools to point at a local dev worker. -->
+    <div class="modal-field" id="modal-worker-url-row" hidden>
+      <label for="modal-worker-url">Worker URL <span class="modal-hint-inline">(advanced)</span></label>
+      <input id="modal-worker-url" autocomplete="off">
     </div>
     <div class="modal-actions">
-      <button class="btn" id="modal-cancel">Cancel</button>
-      <button class="btn approve" id="modal-save">Save</button>
+      <button class="btn" id="modal-cancel" hidden>Cancel</button>
+      <button class="btn approve" id="modal-save">Sign in</button>
     </div>
   </div>
 </div>

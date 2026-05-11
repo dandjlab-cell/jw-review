@@ -37,10 +37,14 @@ const OVERLAY_MAP = {
 
 /* ─────────────────────── Settings / first-run flow ─────────────────────── */
 
+// Hardcoded Worker URL — single production endpoint. Override via
+// localStorage["jw-worker-url"] for local-dev pointing (advanced).
+const WORKER_URL_DEFAULT = "https://jw-review-worker.dandjlab.workers.dev";
+
 function getSettings() {
   return {
-    reviewer:  localStorage.getItem(LS.REVIEWER) || "",
-    workerUrl: localStorage.getItem(LS.WORKER_URL) || "",
+    reviewer:  localStorage.getItem(LS.REVIEWER) || "reviewer",
+    workerUrl: localStorage.getItem(LS.WORKER_URL) || WORKER_URL_DEFAULT,
     token:     localStorage.getItem(LS.TOKEN) || "",
   };
 }
@@ -51,20 +55,24 @@ function setSettings({ reviewer, workerUrl, token }) {
   if (token != null)     localStorage.setItem(LS.TOKEN, token);
 }
 
+// Only the password is required to enter. Reviewer name is optional (falls
+// back to "reviewer"); Worker URL defaults to production.
 function settingsComplete(s) {
-  return !!(s.reviewer && s.workerUrl && s.token);
+  return !!s.token;
 }
 
 function openSettingsModal({ force = false } = {}) {
   const s = getSettings();
-  $("#modal-reviewer").value = s.reviewer;
-  $("#modal-worker-url").value = s.workerUrl;
+  $("#modal-reviewer").value = s.reviewer === "reviewer" ? "" : s.reviewer;
   $("#modal-token").value = s.token;
-  const backdrop = $("#settings-modal");
-  backdrop.hidden = false;
-  $("#modal-cancel").disabled = force && !settingsComplete(s);
-  $("#modal-cancel").style.opacity = $("#modal-cancel").disabled ? "0.4" : "1";
-  setTimeout(() => $("#modal-reviewer").focus(), 30);
+  // Only show the Worker URL field if it's been overridden away from the default.
+  const showAdvanced = s.workerUrl !== WORKER_URL_DEFAULT;
+  $("#modal-worker-url-row").hidden = !showAdvanced;
+  if (showAdvanced) $("#modal-worker-url").value = s.workerUrl;
+  // Cancel only available when reopening from the gear icon — not on first run.
+  $("#modal-cancel").hidden = force;
+  $("#settings-modal").hidden = false;
+  setTimeout(() => $("#modal-token").focus(), 30);
 }
 
 function closeSettingsModal() {
@@ -1423,17 +1431,25 @@ function bindModalEvents() {
   $("#settings-btn").addEventListener("click", () => openSettingsModal({ force: false }));
 
   $("#modal-save").addEventListener("click", () => {
-    const reviewer  = $("#modal-reviewer").value.trim();
-    const workerUrl = $("#modal-worker-url").value.trim().replace(/\/+$/, "");
-    const token     = $("#modal-token").value.trim();
-    if (!reviewer || !workerUrl || !token) {
-      toast("All three fields required", "error");
+    const token = $("#modal-token").value.trim();
+    if (!token) {
+      toast("Password required", "error");
       return;
+    }
+    const reviewer = $("#modal-reviewer").value.trim() || "reviewer";
+    // Worker URL: only read from the input if the advanced row is visible AND
+    // the user actually filled it; otherwise keep whatever is in localStorage
+    // (which falls back to WORKER_URL_DEFAULT via getSettings).
+    const advancedRow = $("#modal-worker-url-row");
+    let workerUrl = null;
+    if (advancedRow && !advancedRow.hidden) {
+      const v = $("#modal-worker-url").value.trim().replace(/\/+$/, "");
+      if (v) workerUrl = v;
     }
     setSettings({ reviewer, workerUrl, token });
     api.refresh();
     closeSettingsModal();
-    toast("Settings saved", "success");
+    toast("Signed in", "success");
     handleRoute(); // re-fetch
   });
   $("#modal-cancel").addEventListener("click", () => {

@@ -319,6 +319,13 @@ a { color: var(--ink); text-decoration: none; }
 /* Locked tags surface during the Phase-1 → Phase-2 window. */
 .tags-edit.locked { pointer-events: none; opacity: 0.65; }
 
+/* Inline hint inside a modal label (e.g. "(optional)"). */
+.modal-hint-inline {
+  font-weight: 400;
+  color: var(--ink-muted);
+  font-size: 0.85em;
+}
+
 /* Opt-in latency HUD; toggled via localStorage["jw-perf-hud"]. */
 #perf-hud {
   position: fixed; bottom: 8px; right: 8px; z-index: 9999;
