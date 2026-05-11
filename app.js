@@ -392,19 +392,11 @@ function bindFilterClicks() {
       if (!m) return;
       const v = m.dataset.value;
       const set = state.filters[group];
-      const wasOn = set.has(v);
-      if (wasOn) set.delete(v); else set.add(v);
+      if (set.has(v)) set.delete(v); else set.add(v);
       if (set.size === 0) set.add(v); // never empty; revert
       paintFilters();
-      // If we just widened the filter (turned a pill back ON), refetch so missing
-      // rows come back from the server. Narrowing is safe to do client-side.
-      const widened = !wasOn;
-      if (widened) {
-        loadRows().then(() => { paintRowList(); paintProgress(); });
-      } else {
-        paintRowList();
-        paintProgress();
-      }
+      paintRowList();
+      paintProgress();
       if (state.selectedPid) navigate(rowPath(state.year, state.selectedPid), true);
     });
   }
@@ -475,11 +467,10 @@ function dotClass(ps) {
 
 async function loadRows() {
   try {
-    const filterParams = {};
-    if (state.filters.status.size === 1) filterParams.status = [...state.filters.status][0];
-    if (state.filters.brand.size === 1)  filterParams.brand  = [...state.filters.brand][0];
-    if (state.filters.format.size === 1) filterParams.format = [...state.filters.format][0];
-    const r = await api.listRows(state.year, filterParams);
+    // Always fetch the unfiltered set; filtering is purely client-side via
+    // state.filters. Keeps the row list, pill counts, and search consistent
+    // regardless of URL query params or pill state.
+    const r = await api.listRows(state.year, {});
     state.rows = (r && r.rows) || [];
     state.rowIndex.clear();
     for (const row of state.rows) state.rowIndex.set(row.pid, row);
