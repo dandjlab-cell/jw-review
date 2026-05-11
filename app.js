@@ -392,11 +392,19 @@ function bindFilterClicks() {
       if (!m) return;
       const v = m.dataset.value;
       const set = state.filters[group];
-      if (set.has(v)) set.delete(v); else set.add(v);
+      const wasOn = set.has(v);
+      if (wasOn) set.delete(v); else set.add(v);
       if (set.size === 0) set.add(v); // never empty; revert
       paintFilters();
-      paintRowList();
-      paintProgress();
+      // If we just widened the filter (turned a pill back ON), refetch so missing
+      // rows come back from the server. Narrowing is safe to do client-side.
+      const widened = !wasOn;
+      if (widened) {
+        loadRows().then(() => { paintRowList(); paintProgress(); });
+      } else {
+        paintRowList();
+        paintProgress();
+      }
       if (state.selectedPid) navigate(rowPath(state.year, state.selectedPid), true);
     });
   }
