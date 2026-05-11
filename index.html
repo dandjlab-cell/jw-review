@@ -5,7 +5,18 @@
 <meta name="viewport" content="width=1280, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>JW Review · AT/Kitchn JW archive</title>
-<link rel="stylesheet" href="styles.css">
+<!-- Cache-bust CSS + JS on every page load. GH Pages caches assets aggressively
+     and there's no build step; otherwise testers get stale UI after each deploy. -->
+<script>
+  (function () {
+    var v = Date.now();
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'styles.css?v=' + v;
+    document.head.appendChild(link);
+    window.__bundleVersion = v;
+  })();
+</script>
 </head>
 <body>
 
@@ -312,6 +323,12 @@
   </div>
 </div>
 
-<script src="app.js"></script>
+<script>
+  (function () {
+    var s = document.createElement('script');
+    s.src = 'app.js?v=' + window.__bundleVersion;
+    document.body.appendChild(s);
+  })();
+</script>
 </body>
 </html>
