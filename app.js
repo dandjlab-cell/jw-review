@@ -32,7 +32,8 @@ const OVERLAY_MAP = {
   "Kitchn|Recipe":          "assets/overlays/kitchn_recipe_overlay.png",
   "Kitchn|Compilation":     "assets/overlays/kitchn_recipe_overlay.png",
   "AT|Compilation":         "assets/overlays/at_ht_compilation_overlay.png",
-  /* AT|House Tour and AT|How To intentionally absent — PLAN §12. */
+  "AT|House Tour":          "assets/overlays/at_ht_overlay.png",
+  "AT|How To":              "assets/overlays/at_diy_overlay.png",
 };
 
 /* ─────────────────────── Settings / first-run flow ─────────────────────── */
