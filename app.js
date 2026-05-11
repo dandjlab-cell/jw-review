@@ -892,11 +892,17 @@ function paintCandidates() {
   }
   const pickedFid = state.recipe.candidate_fid;
   const pickIdx = state.candidates.findIndex(c => c.file_id === pickedFid);
-  meta.textContent = `${state.candidates.length} candidates · Gemini-ranked${pickIdx >= 0 ? ` · current pick is #${pickIdx + 1}` : ""}`;
+  const ranked = state.candidates.filter(c => c.gemini_rank != null).length;
+  const curated = state.candidates.filter(c => c.source === "cloudinary").length;
+  const parts = [`${state.candidates.length} candidates`];
+  if (ranked) parts.push(`${ranked} Gemini-ranked`);
+  if (curated) parts.push(`${curated} brand-curated`);
+  if (pickIdx >= 0) parts.push(`current pick is #${pickIdx + 1}`);
+  meta.textContent = parts.join(" · ");
   for (const c of state.candidates) {
     const isPicked = c.file_id === pickedFid;
     const elt = el("div", {
-      class: "candidate" + (isPicked ? " picked" : ""),
+      class: "candidate" + (isPicked ? " picked" : "") + (c.source ? " src-" + c.source : ""),
       dataset: { fid: c.file_id },
       onclick: () => onCandidateClick(c.file_id),
     });
@@ -905,6 +911,8 @@ function paintCandidates() {
     if (c.gemini_rank != null) {
       const score = c.gemini_score != null ? ` · ${Number(c.gemini_score).toFixed(2)}` : "";
       elt.append(el("div", { class: "gemini-rank" }, `#${c.gemini_rank}${score}`));
+    } else if (c.source === "cloudinary") {
+      elt.append(el("div", { class: "gemini-rank curated-tag" }, "Curated"));
     }
     strip.append(elt);
   }

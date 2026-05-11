@@ -326,6 +326,11 @@ a { color: var(--ink); text-decoration: none; }
   font-size: 0.85em;
 }
 
+/* Cloudinary "brand-curated" candidate badge — distinguishes from Gemini #N. */
+.picker-strip .candidate.src-cloudinary .curated-tag {
+  background: rgba(60, 80, 180, 0.85);
+}
+
 /* Opt-in latency HUD; toggled via localStorage["jw-perf-hud"]. */
 #perf-hud {
   position: fixed; bottom: 8px; right: 8px; z-index: 9999;
