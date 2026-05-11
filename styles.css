@@ -315,6 +315,18 @@ a { color: var(--ink); text-decoration: none; }
 .primary video {
   width: 100%; height: 100%; object-fit: contain; display: block; background: #1A1814;
 }
+
+/* Locked tags surface during the Phase-1 → Phase-2 window. */
+.tags-edit.locked { pointer-events: none; opacity: 0.65; }
+
+/* Opt-in latency HUD; toggled via localStorage["jw-perf-hud"]. */
+#perf-hud {
+  position: fixed; bottom: 8px; right: 8px; z-index: 9999;
+  background: rgba(0,0,0,0.78); color: #fff;
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 6px 10px; border-radius: 6px; pointer-events: none;
+  letter-spacing: 0.02em;
+}
 .primary .duration {
   position: absolute; bottom: 12px; right: 12px;
   background: rgba(0,0,0,0.7); color: white;

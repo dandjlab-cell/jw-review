@@ -198,6 +198,8 @@ const state = {
   selectedPid: null,
   currentRow: null,    // detailed row payload from /api/rows/:y/:p
   candidates: [],      // [{ file_id, gemini_rank, gemini_score }]
+  candidatesPid: null, // pid that state.candidates belongs to (drops stale paints)
+  rowInteractive: false, // true after Phase 2 paint finishes; blocks edits during the gap
   recipe: {            // current in-flight recipe (the live state)
     candidate_fid: null,
     thumbnail_title: "",
@@ -211,6 +213,37 @@ const state = {
   pendingRender: null, // { timeoutId }
   retryAttempt: 0,
   online: navigator.onLine,
+};
+
+// Monotonic counter for loadRow invocations — every async completion checks it
+// and drops if the user has navigated to a different row in the meantime.
+let loadRowToken = 0;
+
+// Latency HUD (opt-in): enable via DevTools console:
+//   localStorage.setItem("jw-perf-hud", "1"); location.reload();
+const PERF = {
+  enabled: (typeof localStorage !== "undefined") && localStorage.getItem("jw-perf-hud") === "1",
+  marks: {},
+  reset() { this.marks = {}; },
+  mark(name) { if (this.enabled) this.marks[name] = performance.now(); },
+  render() {
+    if (!this.enabled) return;
+    let hud = document.querySelector("#perf-hud");
+    if (!hud) {
+      hud = document.createElement("div");
+      hud.id = "perf-hud";
+      document.body.appendChild(hud);
+    }
+    const t0 = this.marks.click;
+    if (!Number.isFinite(t0)) return;
+    const rows = [
+      ["first paint", this.marks.firstPaint],
+      ["getRow",      this.marks.getRowDone],
+      ["candidates",  this.marks.candidatesDone],
+      ["video meta",  this.marks.videoMetadata],
+    ].filter(([_, v]) => Number.isFinite(v));
+    hud.innerHTML = rows.map(([k, v]) => `<div>${k}: ${Math.round(v - t0)} ms</div>`).join("");
+  },
 };
 
 /* ─────────────────────── Routing (hash-based) ───────────────────────
@@ -467,24 +500,93 @@ function paintCenterContent() {
 }
 
 async function loadRow(pid) {
-  paintCenterEmpty("Loading…", pid);
+  const token = ++loadRowToken;
+  PERF.reset(); PERF.mark("click");
+  setRowInteractive(false);              // lock all mutation surfaces immediately
+  // Reset per-row async state — drops stale prior-row candidates.
+  state.candidates = [];
+  state.candidatesPid = null;
+  paintCandidates();
+
+  // Phase 1: paint from the row-list summary we already have.
+  const stub = state.rowIndex.get(pid);
+  if (stub) {
+    state.currentRow = stubToRowDetail(stub);
+    initRecipeFromRow();
+    paintRow();
+    paintCenterContent();
+    PERF.mark("firstPaint"); PERF.render();
+    setPip("loading", "fetching…");
+  } else {
+    paintCenterEmpty("Loading…", pid);
+  }
+
+  // Phase 2: row + candidates fire in parallel.
+  const rowP = api.getRow(state.year, pid);
+  const candP = loadCandidates(pid, token).catch(err => console.warn("candidates load failed:", err));
+  let realRow;
   try {
-    state.currentRow = await api.getRow(state.year, pid);
+    realRow = await rowP;
   } catch (e) {
+    if (token !== loadRowToken) return;   // user moved on — drop
     console.error("getRow failed", e);
-    paintCenterEmpty("Failed to load row", e.message || "");
+    if (!stub) paintCenterEmpty("Failed to load row", e.message || "");
+    else setPip("error", "row fetch failed");
     return;
   }
+  if (token !== loadRowToken) return;     // stale completion — drop
+  state.currentRow = realRow;
   initRecipeFromRow();
   paintRow();
-  paintCenterContent();
+  paintCandidates();                      // re-mark picked using real candidate_fid
+  refreshPickedThumb();
+  setRowInteractive(true);                // unlock now that real data has landed
+  PERF.mark("getRowDone"); PERF.render();
   setPip("idle", "ready");
-  // Kick off candidates load in parallel.
-  loadCandidates(pid).catch(err => console.warn("candidates load failed:", err));
-  // Try to recover any local draft (tab-crash recovery).
   recoverDraftIfAny();
-  // Initial overlay paint.
   scheduleOverlayLayout();
+  await candP;
+}
+
+// Build a row-detail-shaped object from the row-list summary, used for
+// Phase 1 of loadRow before the real /api/rows/:y/:p response lands.
+function stubToRowDetail(stub) {
+  return {
+    pid: stub.pid,
+    project_number: stub.pid,
+    title: stub.title || "",
+    thumbnail_title: "",
+    description: "", tags: "", branded: "", category: "", duration: stub.duration || "",
+    format: stub.format || "", orientation: "", recipe_category: "", seasonal: "",
+    series: "", site: stub.brand === "Kitchn" ? "The Kitchn" : "Apartment Therapy",
+    sponsoring_brand: "", talent_name: "", talent_presence: "", tour_city: "",
+    has_srt: "", review_status: stub.review_status || "", push_status: stub.push_status || "",
+    candidate_fid: null, candidate_source: "stub",
+    thumbnails_asset_fid: stub.thumb_fid || null,
+    thumbnails_asset_url: "", drive_folder_url: "",
+    video_asset_url: "", captions_asset_url: "",
+    jw_id: "",
+  };
+}
+
+// Single gate for all mutation surfaces. Called false at loadRow start,
+// true after Phase 2 finishes.
+function setRowInteractive(on) {
+  state.rowInteractive = on;
+  const center = $("#center");
+  const right = $("#rightpane");
+  for (const root of [center, right]) {
+    if (!root) continue;
+    for (const inp of root.querySelectorAll("input, select, textarea")) {
+      inp.disabled = !on;
+    }
+  }
+  for (const sel of [".btn.approve", ".btn.fix", ".btn.exclude"]) {
+    const b = document.querySelector(sel);
+    if (b) b.disabled = !on;
+  }
+  const tags = $("#tags-edit");
+  if (tags) tags.classList.toggle("locked", !on);
 }
 
 function initRecipeFromRow() {
@@ -547,8 +649,10 @@ function paintRow() {
   if (videoFid) {
     videoEl.src = api.url(`/api/drive-video/${videoFid}?t=${encodeURIComponent(api.token || "")}`);
     videoEl.load();  // required after src change to actually fetch
+    videoEl.onloadedmetadata = () => { PERF.mark("videoMetadata"); PERF.render(); };
   } else {
     videoEl.removeAttribute("src");
+    videoEl.onloadedmetadata = null;
     videoEl.load();  // reset media element
   }
 
@@ -747,20 +851,24 @@ window.addEventListener("resize", fitOverlayDebounced);
 
 /* ─────────────────────── Candidates ─────────────────────── */
 
-async function loadCandidates(pid) {
+async function loadCandidates(pid, token) {
   const strip = $("#candidate-strip");
   strip.innerHTML = `<div class="picker-empty">Loading candidates…</div>`;
   let cands;
   try {
     const r = await api.candidates(state.year, pid);
+    if (token !== undefined && token !== loadRowToken) return; // stale — user moved on
     cands = (Array.isArray(r) ? r : (r && r.candidates)) || [];
   } catch (e) {
+    if (token !== undefined && token !== loadRowToken) return;
     console.error("candidates failed", e);
     strip.innerHTML = `<div class="picker-empty">Failed to load candidates: ${escapeHtml(e.message || "")}</div>`;
     return;
   }
   state.candidates = cands;
+  state.candidatesPid = pid;
   paintCandidates();
+  PERF.mark("candidatesDone"); PERF.render();
 }
 
 function paintCandidates() {
@@ -794,6 +902,9 @@ function paintCandidates() {
 
 function onCandidateClick(fid) {
   if (!fid) return;
+  // Gate: candidates must belong to the current pid, and row must be interactive.
+  if (!state.rowInteractive) return;
+  if (state.candidatesPid !== state.selectedPid) return;
   if (fid === state.recipe.candidate_fid) return;
   state.recipe.candidate_fid = fid;
   // Instant preview swap (browser canvas — visible immediately).
@@ -1362,8 +1473,8 @@ function bindKeyboard() {
     }
     if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); moveSelection(1); }
     else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); moveSelection(-1); }
-    else if (e.key === "a") { e.preventDefault(); doApproveAction("approve"); }
-    else if (e.key === "x") { e.preventDefault(); if (confirm(`Exclude ${state.selectedPid}?`)) doApproveAction("exclude"); }
+    else if (e.key === "a") { e.preventDefault(); if (state.rowInteractive) doApproveAction("approve"); }
+    else if (e.key === "x") { e.preventDefault(); if (state.rowInteractive && confirm(`Exclude ${state.selectedPid}?`)) doApproveAction("exclude"); }
     else if (e.key === "/") { e.preventDefault(); $("#search-input").focus(); }
     else if (e.key === "?") { e.preventDefault(); $("#help-modal").hidden = false; }
   });
