@@ -515,6 +515,7 @@ async function loadRow(pid) {
   // Reset per-row async state — drops stale prior-row candidates.
   state.candidates = [];
   state.candidatesPid = null;
+  state.candidatesAltsExpanded = false;
   paintCandidates();
 
   // Phase 1: paint from the row-list summary we already have.
@@ -881,6 +882,16 @@ async function loadCandidates(pid, token) {
   PERF.mark("candidatesDone"); PERF.render();
 }
 
+// Partition state.candidates into:
+//   primary  — the trusted ranked set (pro source only; one rank per number)
+//   alts     — everything else (flash, other extracts, cloudinary)
+// Primary always shows; alts hide behind a "Show N more" toggle.
+function partitionCandidates() {
+  const primary = state.candidates.filter(c => c.source === "pro");
+  const alts    = state.candidates.filter(c => c.source !== "pro");
+  return { primary, alts };
+}
+
 function paintCandidates() {
   const strip = $("#candidate-strip");
   strip.innerHTML = "";
@@ -891,15 +902,24 @@ function paintCandidates() {
     return;
   }
   const pickedFid = state.recipe.candidate_fid;
-  const pickIdx = state.candidates.findIndex(c => c.file_id === pickedFid);
-  const ranked = state.candidates.filter(c => c.gemini_rank != null).length;
-  const curated = state.candidates.filter(c => c.source === "cloudinary").length;
+  const { primary, alts } = partitionCandidates();
+  // If the picked candidate lives in alts, force-expand so the reviewer sees what they picked.
+  const pickedInAlts = alts.some(c => c.file_id === pickedFid);
+  if (pickedInAlts) state.candidatesAltsExpanded = true;
+  const showAlts = !!state.candidatesAltsExpanded;
+
+  // Meta line — clear about what's in primary vs alts.
+  const altCounts = alts.reduce((m, c) => ((m[c.source] = (m[c.source] || 0) + 1), m), {});
+  const altParts = [];
+  if (altCounts.flash) altParts.push(`${altCounts.flash} Flash`);
+  if (altCounts.cloudinary) altParts.push(`${altCounts.cloudinary} Cloudinary`);
+  if (altCounts.extract) altParts.push(`${altCounts.extract} extract`);
   const parts = [`${state.candidates.length} candidates`];
-  if (ranked) parts.push(`${ranked} Gemini-ranked`);
-  if (curated) parts.push(`${curated} brand-curated`);
-  if (pickIdx >= 0) parts.push(`current pick is #${pickIdx + 1}`);
+  if (primary.length) parts.push(`${primary.length} Gemini-ranked`);
+  if (altParts.length) parts.push(altParts.join(" + ") + " alt");
   meta.textContent = parts.join(" · ");
-  for (const c of state.candidates) {
+
+  const renderOne = (c) => {
     const isPicked = c.file_id === pickedFid;
     const elt = el("div", {
       class: "candidate" + (isPicked ? " picked" : "") + (c.source ? " src-" + c.source : ""),
@@ -908,13 +928,31 @@ function paintCandidates() {
     });
     elt.append(el("img", { src: api.driveImageUrl(c.file_id, "candidate"), loading: "lazy", alt: "" }));
     if (isPicked) elt.append(el("div", { class: "badge-mini" }, "Picked"));
-    if (c.gemini_rank != null) {
-      const score = c.gemini_score != null ? ` · ${Number(c.gemini_score).toFixed(2)}` : "";
-      elt.append(el("div", { class: "gemini-rank" }, `#${c.gemini_rank}${score}`));
+    // Only show #N rank for primary (pro) — collisions with flash #N are confusing.
+    if (c.source === "pro" && c.gemini_rank != null) {
+      elt.append(el("div", { class: "gemini-rank" }, `#${c.gemini_rank}`));
     } else if (c.source === "cloudinary") {
-      elt.append(el("div", { class: "gemini-rank curated-tag" }, "Curated"));
+      elt.append(el("div", { class: "gemini-rank cloudinary-tag" }, "Cloudinary"));
+    } else if (c.source === "flash") {
+      elt.append(el("div", { class: "gemini-rank flash-tag" }, "Flash"));
+    } else if (c.source === "extract") {
+      elt.append(el("div", { class: "gemini-rank extract-tag" }, "Extract"));
     }
-    strip.append(elt);
+    return elt;
+  };
+  for (const c of primary) strip.append(renderOne(c));
+  if (alts.length) {
+    if (showAlts) {
+      const sep = el("div", { class: "alts-sep" }, "Alternatives");
+      strip.append(sep);
+      for (const c of alts) strip.append(renderOne(c));
+    } else {
+      const more = el("button", {
+        class: "show-more-btn",
+        onclick: () => { state.candidatesAltsExpanded = true; paintCandidates(); },
+      }, `Show ${alts.length} more`);
+      strip.append(more);
+    }
   }
 }
 

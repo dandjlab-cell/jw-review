@@ -326,9 +326,40 @@ a { color: var(--ink); text-decoration: none; }
   font-size: 0.85em;
 }
 
-/* Cloudinary "brand-curated" candidate badge — distinguishes from Gemini #N. */
-.picker-strip .candidate.src-cloudinary .curated-tag {
-  background: rgba(60, 80, 180, 0.85);
+/* Source-specific badges on alternates (Cloudinary, Flash, Extract). Each gets
+   its own muted color so reviewer can tell them apart at a glance. */
+.picker-strip .gemini-rank.cloudinary-tag { background: rgba(60, 80, 180, 0.85); }
+.picker-strip .gemini-rank.flash-tag      { background: rgba(170, 100, 30, 0.85); }
+.picker-strip .gemini-rank.extract-tag    { background: rgba(90, 90, 90, 0.85); }
+
+/* "Show N more" button at the end of the primary strip. */
+.picker-strip .show-more-btn {
+  align-self: center;
+  background: transparent;
+  border: 1px dashed var(--rule);
+  color: var(--ink-muted);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  margin-left: 4px;
+}
+.picker-strip .show-more-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Vertical "Alternatives" separator between primary set and alts. */
+.picker-strip .alts-sep {
+  display: flex;
+  align-items: center;
+  color: var(--ink-muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0 6px;
+  border-left: 1px solid var(--rule);
+  margin-left: 6px;
 }
 
 /* Opt-in latency HUD; toggled via localStorage["jw-perf-hud"]. */
