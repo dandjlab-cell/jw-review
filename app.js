@@ -23,9 +23,12 @@ const RENDER_IDLE_MS = 5000;
 const RETRY_BACKOFFS_MS = [500, 1500, 5000];
 const POLL_PROGRESS_MS = 30_000;
 
-const FONT_MIN_PT = 56;
-const FONT_MAX_PT = 76;
 const FONT_STEP_PT = 2;
+const FONT_MIN_PT_DEFAULT = 56;
+const FONT_MAX_PT_DEFAULT = 76;
+// Back-compat aliases (some old code paths read these)
+const FONT_MIN_PT = FONT_MIN_PT_DEFAULT;
+const FONT_MAX_PT = FONT_MAX_PT_DEFAULT;
 
 /* Brand+format → overlay PNG (live preview only). PLAN §12. */
 const OVERLAY_MAP = {
@@ -35,6 +38,39 @@ const OVERLAY_MAP = {
   "AT|House Tour":          "assets/overlays/at_ht_overlay.png",
   "AT|How To":              "assets/overlays/at_diy_overlay.png",
 };
+
+/* Per-overlay title-area geometry + font bounds.
+ * Mirrors the production renderers in ~/DevApps/jw-thumbnail-renderer/renderer/:
+ *   - dispatch_recipes.py (Kitchn Recipe/Compilation)
+ *   - dispatch_at_compilations.py (AT Compilation)
+ *   - dispatch_at_house_tour.py (AT House Tour — uses the 3-field layout below)
+ *   - AT How To (no production renderer yet — measured from the PNG; refine when renderer ships)
+ *
+ * `top/bot/left/right` are percentages of a 1080×1920 portrait canvas.
+ * `fontMax/fontMin` are pt values relative to 1920h; the JS scales to box height.
+ */
+const OVERLAY_GEOM = {
+  // CARD_Y=(1491,1801), LOGO_Y_BOTTOM=1570, PAD_TOP=12 PAD_BOT=28 → 1582..1773
+  // CARD_X=(97,982), inner pad 40 → 137..942 = 12.7%..87.3%
+  "Kitchn|Recipe":      { top: 82.4, bot: 7.7,  left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
+  "Kitchn|Compilation": { top: 82.4, bot: 7.7,  left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
+  // CARD_Y=(1435,1800), HEADER_Y_BOTTOM=1605, PAD_TOP=12 PAD_BOT=18 → 1617..1782
+  // CARD_X=(64,1011), inner pad 50 → 114..961 = 10.6%..89.0%
+  "AT|Compilation":     { top: 84.2, bot: 7.2,  left: 10.6, right: 11.0, fontMax: 64, fontMin: 44 },
+  // 3-field layout — overlay-title hidden; overlay-ht-fields used instead. Use the
+  // 3-field renderer's font range as a fallback safety size if anything else falls through.
+  "AT|House Tour":      { top: 80.0, bot: 7.0,  left: 12.0, right: 12.0, fontMax: 41, fontMin: 28 },
+  // AT|How To has no production renderer yet — geometry measured from at_diy_overlay.png:
+  // yellow card ~y=1410..1790 (73.4%..93.2%), "apartment therapy" branding inside top of card
+  // ending ~y=1500; title space below ~1512..1772 = 78.75%..7.7% from bottom. Font range
+  // mirrors AT Compilation (similar card height).
+  "AT|How To":          { top: 78.75, bot: 7.7,  left: 10.6, right: 11.0, fontMax: 64, fontMin: 44 },
+};
+
+function getOverlayGeom(brand, format) {
+  const key = `${brand}|${format}`;
+  return OVERLAY_GEOM[key] || OVERLAY_GEOM["Kitchn|Recipe"];
+}
 
 /* ─────────────────────── Settings / first-run flow ─────────────────────── */
 
@@ -773,8 +809,6 @@ function paintOverlayPng() {
   if (overlay) {
     img.src = overlay;
     img.hidden = false;
-    // AT House Tour uses a 3-field layout (LOCATION/SIZE/HOME TYPE) instead of a
-    // single centered title. Hide the centered title; render 3 split values.
     $("#overlay-title-text").style.visibility = isHT3field ? "hidden" : "visible";
     $("#overlay-ht-fields").hidden = !isHT3field;
   } else {
@@ -782,6 +816,15 @@ function paintOverlayPng() {
     img.removeAttribute("src");
     $("#overlay-title-text").style.visibility = "hidden";
     $("#overlay-ht-fields").hidden = true;
+  }
+  // Apply per-overlay title-area geometry (matches the production renderer).
+  const geom = getOverlayGeom(state.recipe.brand, state.recipe.format);
+  const titleEl = $("#overlay-title-text");
+  if (titleEl && !isHT3field) {
+    titleEl.style.top    = geom.top + "%";
+    titleEl.style.bottom = geom.bot + "%";
+    titleEl.style.left   = geom.left + "%";
+    titleEl.style.right  = geom.right + "%";
   }
   if (isHT3field) paintHouseTourFields();
 }
@@ -865,22 +908,22 @@ function fitOverlayText() {
     return;
   }
 
-  // The CSS pt sizes in the spec are relative to a 1920px-tall production canvas.
-  // Scale down to the rendered box height. Production: 76pt @ 1920h → 76 * (containerH/1920) px.
+  // Per-overlay font bounds + geometry — mirrors the production renderer.
+  const geom = getOverlayGeom(state.recipe.brand, state.recipe.format);
+  const fontMin = geom.fontMin;
+  const fontMax = geom.fontMax;
+
+  // The pt sizes are relative to a 1920px-tall production canvas. Scale to box.
   const scaleToPx = pt => (pt * containerH) / 1920;
 
-  // Reset to max
-  let chosenPt = FONT_MIN_PT;
+  let chosenPt = fontMin;
   let chosenLines = 99;
 
-  // Probe largest first
-  for (let pt = FONT_MAX_PT; pt >= FONT_MIN_PT; pt -= FONT_STEP_PT) {
+  for (let pt = fontMax; pt >= fontMin; pt -= FONT_STEP_PT) {
     titleEl.style.fontSize = scaleToPx(pt) + "px";
-    // Force layout
     const naturalH = titleEl.scrollHeight;
     const lineH = parseFloat(getComputedStyle(titleEl).lineHeight) || (scaleToPx(pt) * 1.05);
     const lines = Math.max(1, Math.round(naturalH / lineH));
-    // Allow up to 3 lines — users can force breaks via Enter (textarea \n).
     const fits = naturalH <= titleEl.clientHeight + 1 && lines <= 3;
     if (fits) {
       chosenPt = pt;
@@ -888,13 +931,12 @@ function fitOverlayText() {
       break;
     }
   }
-  // If nothing fit even at min, accept min and report whatever line count we observed.
   if (chosenLines === 99) {
-    titleEl.style.fontSize = scaleToPx(FONT_MIN_PT) + "px";
+    titleEl.style.fontSize = scaleToPx(fontMin) + "px";
     const naturalH = titleEl.scrollHeight;
-    const lineH = parseFloat(getComputedStyle(titleEl).lineHeight) || (scaleToPx(FONT_MIN_PT) * 1.05);
+    const lineH = parseFloat(getComputedStyle(titleEl).lineHeight) || (scaleToPx(fontMin) * 1.05);
     chosenLines = Math.max(1, Math.round(naturalH / lineH));
-    chosenPt = FONT_MIN_PT;
+    chosenPt = fontMin;
   }
   $("#picked-overlay-meta").textContent = `${chosenPt}pt / ${chosenLines} ${chosenLines === 1 ? "line" : "lines"}`;
 }
