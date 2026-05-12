@@ -659,9 +659,14 @@ function setRowInteractive(on) {
 
 function initRecipeFromRow() {
   const row = state.currentRow || {};
+  // Phase-1 stubs lack thumbnail_title; we must NOT fall back to row.title here
+  // because that would flash the long Title in the overlay until the real row
+  // lands and overwrites it. Leave thumbnail_title empty if not present yet —
+  // the next initRecipeFromRow() call (after /api/rows resolves) will fill it.
+  const hasStubOnly = !("thumbnail_title" in row);
   state.recipe = {
     candidate_fid: row.candidate_fid || null,
-    thumbnail_title: row.thumbnail_title || row.title || "",
+    thumbnail_title: hasStubOnly ? "" : (row.thumbnail_title || ""),
     video_title: row.title || "",
     brand: row.brand || normalizeSiteToBrand(row.site),
     format: row.format || "",

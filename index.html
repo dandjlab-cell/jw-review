@@ -106,18 +106,7 @@
         <div class="pair-card">
           <div class="label">
             Picked Thumbnail
-            <div class="picked-thumb-actions">
-              <select id="overlay-override" class="overlay-override" title="Override the auto-resolved overlay template">
-                <option value="">Auto template</option>
-                <option value="Kitchn|Recipe">Kitchn Recipe</option>
-                <option value="Kitchn|Compilation">Kitchn Compilation</option>
-                <option value="AT|Compilation">AT Compilation</option>
-                <option value="AT|House Tour">AT House Tour</option>
-                <option value="AT|How To">AT How To</option>
-                <option value="AT|Product Review">AT Product Review</option>
-              </select>
-              <button class="history-btn" id="history-btn" title="History">⟲ History</button>
-            </div>
+            <button class="history-btn" id="history-btn" title="History">⟲ History</button>
           </div>
           <div class="image" id="picked-thumb-box">
             <img id="picked-thumb-img" alt="">
@@ -137,6 +126,15 @@
             <div class="status-pip" id="status-pip" data-state="idle"><span class="pip-icon">●</span><span class="pip-label">idle</span></div>
             <div class="approximate-banner" id="approximate-banner" hidden>⚡ approximate · canvas fallback</div>
           </div>
+          <select id="overlay-override" class="overlay-override" title="Override the auto-resolved overlay template — if the wrong template was applied, pick the correct one here">
+            <option value="">Auto template</option>
+            <option value="Kitchn|Recipe">Kitchn Recipe</option>
+            <option value="Kitchn|Compilation">Kitchn Compilation</option>
+            <option value="AT|Compilation">AT Compilation</option>
+            <option value="AT|House Tour">AT House Tour</option>
+            <option value="AT|How To">AT How To</option>
+            <option value="AT|Product Review">AT Product Review</option>
+          </select>
         </div>
 
         <div class="editor-and-picker">
