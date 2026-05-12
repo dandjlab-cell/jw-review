@@ -410,6 +410,30 @@ a { color: var(--ink); text-decoration: none; }
   font-size: 10px;
   display: flex; justify-content: space-between; align-items: center;
 }
+.picked-thumb-actions {
+  display: flex; align-items: center; gap: 6px;
+}
+.overlay-override {
+  font-size: 10px;
+  padding: 2px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--bg-card);
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  max-width: 160px;
+}
+.overlay-override:hover { border-color: var(--ink-muted); }
+.overlay-override.overridden {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.candidate .frame-tag {
+  background: rgba(80, 110, 200, 0.85);
+  font-weight: 500;
+}
 .pair-card .image {
   aspect-ratio: 9/16;
   background: var(--bg-card);

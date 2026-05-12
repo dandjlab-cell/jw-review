@@ -106,7 +106,18 @@
         <div class="pair-card">
           <div class="label">
             Picked Thumbnail
-            <button class="history-btn" id="history-btn" title="History">⟲ History</button>
+            <div class="picked-thumb-actions">
+              <select id="overlay-override" class="overlay-override" title="Override the auto-resolved overlay template">
+                <option value="">Auto template</option>
+                <option value="Kitchn|Recipe">Kitchn Recipe</option>
+                <option value="Kitchn|Compilation">Kitchn Compilation</option>
+                <option value="AT|Compilation">AT Compilation</option>
+                <option value="AT|House Tour">AT House Tour</option>
+                <option value="AT|How To">AT How To</option>
+                <option value="AT|Product Review">AT Product Review</option>
+              </select>
+              <button class="history-btn" id="history-btn" title="History">⟲ History</button>
+            </div>
           </div>
           <div class="image" id="picked-thumb-box">
             <img id="picked-thumb-img" alt="">
@@ -249,6 +260,7 @@
           <select data-field="review_status">
             <option value="">—</option>
             <option>Pending</option><option>Reviewed</option><option>Approved</option><option>Rejected</option>
+            <option>NEEDS REVIEW</option><option>SKIP</option>
           </select>
         </div>
       </div>
@@ -300,15 +312,15 @@
 <!-- ========== FIX REASON DIALOG ========== -->
 <div class="modal-backdrop" id="fix-modal" hidden>
   <div class="modal modal-small">
-    <h2 class="serif">Fix this row</h2>
-    <p class="modal-sub">Sets Review Status = Rejected, Push Status = Hold: &lt;reason&gt;.</p>
+    <h2 class="serif">Send back for fix</h2>
+    <p class="modal-sub">Sets Review Status = Rejected, Push Status = Hold. Your note is saved with the row so the editor knows what to address.</p>
     <div class="modal-field">
-      <label for="fix-reason">Reason</label>
-      <input id="fix-reason" placeholder="e.g. wrong talent, blurry hero" autocomplete="off">
+      <label for="fix-reason">Note for editor</label>
+      <textarea id="fix-reason" rows="4" placeholder="e.g. Wrong talent name; should be Sarah not Sarah J. Or: hero shot is blurry, try frame 14 instead." autocomplete="off"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn" id="fix-cancel">Cancel</button>
-      <button class="btn fix" id="fix-confirm">Mark as Fix</button>
+      <button class="btn fix" id="fix-confirm">Send Back to Editor</button>
     </div>
   </div>
 </div>

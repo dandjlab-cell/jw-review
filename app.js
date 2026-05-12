@@ -37,6 +37,17 @@ const OVERLAY_MAP = {
   "AT|Compilation":         "assets/overlays/at_ht_compilation_overlay.png",
   "AT|House Tour":          "assets/overlays/at_ht_overlay.png",
   "AT|How To":              "assets/overlays/at_diy_overlay.png",
+  "AT|Product Review":      "assets/overlays/at_product_overlay.png",
+};
+
+/* Human-readable labels for the manual template-override picker. */
+const OVERLAY_LABELS = {
+  "Kitchn|Recipe":          "Kitchn Recipe",
+  "Kitchn|Compilation":     "Kitchn Compilation",
+  "AT|Compilation":         "AT Compilation",
+  "AT|House Tour":          "AT House Tour",
+  "AT|How To":              "AT How To",
+  "AT|Product Review":      "AT Product Review",
 };
 
 /* Per-overlay title-area geometry + font bounds.
@@ -67,7 +78,12 @@ const OVERLAY_GEOM = {
   // 50px text pad → title x=185..893 → left:17.13%, right:17.31%.
   // Title area is shorter than Kitchn Recipe (147px vs 191px) so font max is
   // smaller (64pt mirrors AT Compilation).
-  "AT|How To":          { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  "AT|How To":          { top: 84.43,  bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  // AT|Product Review — pixel-measured from at_product_overlay.png:
+  // blue card y=1544..1799 (80.4..93.7%), branding y=1586..1603 (82.6..83.5%),
+  // title safe area y=1615..1771 → top:84.115%, bot:7.760%.
+  // Card x=132..946 with 50px pad → left:16.85%, right:17.04%.
+  "AT|Product Review":  { top: 84.115, bot: 7.76, left: 16.85, right: 17.04, fontMax: 64, fontMin: 44 },
 };
 
 function getOverlayGeom(brand, format) {
@@ -247,6 +263,7 @@ const state = {
   currentRow: null,    // detailed row payload from /api/rows/:y/:p
   candidates: [],      // [{ file_id, gemini_rank, gemini_score }]
   candidatesPid: null, // pid that state.candidates belongs to (drops stale paints)
+  overlayOverride: "", // brand|format key when reviewer manually selected a different template, else ""
   rowInteractive: false, // true after Phase 2 paint finishes; blocks edits during the gap
   recipe: {            // current in-flight recipe (the live state)
     candidate_fid: null,
@@ -556,6 +573,7 @@ async function loadRow(pid) {
   state.candidates = [];
   state.candidatesPid = null;
   state.candidatesAltsExpanded = false;
+  state.overlayOverride = "";   // each row starts on Auto
   paintCandidates();
 
   // Phase 1: paint from the row-list summary we already have.
@@ -805,8 +823,16 @@ function paintLinks(row) {
 }
 
 function paintOverlayPng() {
-  const key = `${state.recipe.brand || ""}|${state.recipe.format || ""}`;
+  const override = state.overlayOverride || "";
+  const autoKey = `${state.recipe.brand || ""}|${state.recipe.format || ""}`;
+  const key = override || autoKey;
   const overlay = OVERLAY_MAP[key];
+  // Reflect override state on the picker.
+  const sel = $("#overlay-override");
+  if (sel) {
+    if (sel.value !== override) sel.value = override;
+    sel.classList.toggle("overridden", !!override);
+  }
   const img = $("#overlay-png");
   const isHT3field = (state.recipe.brand === "AT" && state.recipe.format === "House Tour");
   if (overlay) {
@@ -830,6 +856,16 @@ function paintOverlayPng() {
     titleEl.style.right  = geom.right + "%";
   }
   if (isHT3field) paintHouseTourFields();
+}
+
+/* Map a brand|format override key back to brand+format for geom lookup. */
+function activeOverlayBrandFormat() {
+  const override = state.overlayOverride || "";
+  if (override && override.includes("|")) {
+    const [b, f] = override.split("|");
+    return { brand: b, format: f };
+  }
+  return { brand: state.recipe.brand, format: state.recipe.format };
 }
 
 /* Split `<location> · <size> · <home_type>` into the three positioned fields.
@@ -912,7 +948,9 @@ function fitOverlayText() {
   }
 
   // Per-overlay font bounds + geometry — mirrors the production renderer.
-  const geom = getOverlayGeom(state.recipe.brand, state.recipe.format);
+  // Respects manual template override if set.
+  const { brand: gb, format: gf } = activeOverlayBrandFormat();
+  const geom = getOverlayGeom(gb, gf);
   const fontMin = geom.fontMin;
   const fontMax = geom.fontMax;
 
@@ -970,11 +1008,11 @@ async function loadCandidates(pid, token) {
 }
 
 // Partition state.candidates into:
-//   primary  — Gemini-ranked (pro source only)
+//   primary  — Gemini-ranked picks (source="pro") OR raw extracted frames (source="frames")
 //   alts     — Cloudinary brand-curated thumbs (hidden behind Show more)
-// Flash + raw extracts are intentionally excluded; reviewers don't need them.
+// Flash + other extract folders are intentionally excluded.
 function partitionCandidates() {
-  const primary = state.candidates.filter(c => c.source === "pro");
+  const primary = state.candidates.filter(c => c.source === "pro" || c.source === "frames");
   const alts    = state.candidates.filter(c => c.source === "cloudinary");
   return { primary, alts };
 }
@@ -997,8 +1035,11 @@ function paintCandidates() {
 
   // Meta line.
   const visibleTotal = primary.length + alts.length;
+  const proCount    = primary.filter(c => c.source === "pro").length;
+  const framesCount = primary.filter(c => c.source === "frames").length;
   const parts = [`${visibleTotal} candidates`];
-  if (primary.length) parts.push(`${primary.length} Gemini-ranked`);
+  if (proCount)    parts.push(`${proCount} Gemini-ranked`);
+  if (framesCount) parts.push(`${framesCount} extracted frames`);
   if (alts.length) parts.push(`${alts.length} Cloudinary`);
   meta.textContent = parts.join(" · ");
 
@@ -1013,6 +1054,8 @@ function paintCandidates() {
     if (isPicked) elt.append(el("div", { class: "badge-mini" }, "Picked"));
     if (c.source === "pro" && c.gemini_rank != null) {
       elt.append(el("div", { class: "gemini-rank" }, `#${c.gemini_rank}`));
+    } else if (c.source === "frames" && c.gemini_rank != null) {
+      elt.append(el("div", { class: "gemini-rank frame-tag" }, `Frame ${c.gemini_rank}`));
     } else if (c.source === "cloudinary") {
       elt.append(el("div", { class: "gemini-rank cloudinary-tag" }, "Cloudinary"));
     }
@@ -1520,6 +1563,16 @@ function bindFieldEvents() {
       }
     }
   });
+
+  // Manual overlay template override.
+  const overlaySel = $("#overlay-override");
+  if (overlaySel) {
+    overlaySel.addEventListener("change", () => {
+      state.overlayOverride = overlaySel.value || "";
+      paintOverlayPng();
+      fitOverlayText();
+    });
+  }
 
   // Approve / Fix / Exclude
   $$('[data-action]').forEach(btn => {
