@@ -60,11 +60,14 @@ const OVERLAY_GEOM = {
   // 3-field layout — overlay-title hidden; overlay-ht-fields used instead. Use the
   // 3-field renderer's font range as a fallback safety size if anything else falls through.
   "AT|House Tour":      { top: 80.0, bot: 7.0,  left: 12.0, right: 12.0, fontMax: 41, fontMin: 28 },
-  // AT|How To has no production renderer yet — geometry measured from at_diy_overlay.png:
-  // yellow card ~y=1410..1790 (73.4%..93.2%), "apartment therapy" branding inside top of card
-  // ending ~y=1500; title space below ~1512..1772 = 78.75%..7.7% from bottom. Font range
-  // mirrors AT Compilation (similar card height).
-  "AT|How To":          { top: 78.75, bot: 7.7,  left: 10.6, right: 11.0, fontMax: 64, fontMin: 44 },
+  // AT|How To — no production renderer yet. Geometry pixel-measured from
+  // at_diy_overlay.png (1080×1920): yellow card y=1547..1796 (80.6..93.5%),
+  // apartment-therapy branding y=1576..1609 (82.1..83.8%), title safe area
+  // y=1621..1768 → top:84.43%, bot:7.92%. Card x=135..943 (12.5..87.3%) with
+  // 50px text pad → title x=185..893 → left:17.13%, right:17.31%.
+  // Title area is shorter than Kitchn Recipe (147px vs 191px) so font max is
+  // smaller (64pt mirrors AT Compilation).
+  "AT|How To":          { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
 };
 
 function getOverlayGeom(brand, format) {
