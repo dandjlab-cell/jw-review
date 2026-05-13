@@ -305,7 +305,7 @@ const state = {
   rows: [],            // [{ pid, title, thumb_fid, duration, format, push_status, review_status, brand }]
   rowIndex: new Map(), // pid → row
   filters: {
-    status: new Set(["Ready", "Hold", "Uploaded", "Excluded"]),
+    status: new Set(["REVIEW", "JW APPROVED", "FIX", "EXCLUDE"]),
     brand: new Set(["Kitchn", "AT"]),
     format: new Set(["Recipe", "House Tour", "How To", "Promo", "Compilation", "Product Review", "Before & After", "Advice"]),
   },
@@ -537,8 +537,8 @@ function paintFilters() {
 function paintFilterCounts() {
   const counts = { status: {}, brand: {}, format: {} };
   for (const r of state.rows) {
-    const ps = pushStatusBucket(r.push_status);
-    counts.status[ps] = (counts.status[ps] || 0) + 1;
+    const rs = reviewStatusBucket(r.review_status);
+    counts.status[rs] = (counts.status[rs] || 0) + 1;
     if (r.brand)  counts.brand[r.brand]   = (counts.brand[r.brand]   || 0) + 1;
     if (r.format) counts.format[r.format] = (counts.format[r.format] || 0) + 1;
   }
@@ -553,6 +553,19 @@ function pushStatusBucket(ps) {
   if (ps === "Excluded") return "Excluded";
   if (ps === "Uploaded") return "Uploaded";
   return "Ready";
+}
+
+// Review Status bucket — what the left-pane filter cares about. Maps the
+// canonical enum (JW APPROVED / FIX / EXCLUDE) plus REVIEW (the default
+// "needs review" state when the cell is blank). Legacy "Approved" maps to
+// "JW APPROVED" so old rows still bucket correctly.
+function reviewStatusBucket(rs) {
+  const s = (rs || "").trim().toUpperCase();
+  if (s === "JW APPROVED" || s === "APPROVED") return "JW APPROVED";
+  if (s === "FIX") return "FIX";
+  if (s === "EXCLUDE") return "EXCLUDE";
+  // Empty + everything else (REVIEW, "NEEDS REVIEW", legacy values) → REVIEW
+  return "REVIEW";
 }
 
 function bindFilterClicks() {
@@ -577,7 +590,7 @@ function bindFilterClicks() {
 function filteredRows() {
   const q = state.search.toLowerCase().trim();
   return state.rows.filter(r => {
-    if (!state.filters.status.has(pushStatusBucket(r.push_status))) return false;
+    if (!state.filters.status.has(reviewStatusBucket(r.review_status))) return false;
     if (r.brand  && !state.filters.brand.has(r.brand))   return false;
     if (r.format && !state.filters.format.has(r.format)) return false;
     if (q) {
@@ -638,6 +651,14 @@ function paintRowList() {
     );
     list.append(item);
   }
+  // Keep the selected row in view. block: "nearest" only scrolls if the row
+  // is currently outside the visible area — won't yank the list around when
+  // the selection is already visible. inline: "nearest" prevents horizontal jump.
+  // Schedule on rAF so layout settles after innerHTML rebuild.
+  requestAnimationFrame(() => {
+    const sel = list.querySelector(".row-item.selected");
+    if (sel) sel.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
 }
 
 // Music status pill. License Action is the source of truth (swap/keep/add_music/
