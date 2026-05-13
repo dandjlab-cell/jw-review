@@ -279,7 +279,7 @@ class ApiClient {
   // both House Tour and Compilation variants).
   getRow(year, pid, row)         { return this.request(`/api/rows/${year}/${pid}${rowQ(row)}`); }
   patchRow(year, pid, body, row) { return this.request(`/api/rows/${year}/${pid}${rowQ(row)}`, { method: "PATCH", body }); }
-  candidates(year, pid)          { return this.request(`/api/candidates/${year}/${pid}`); }
+  candidates(year, pid, row)     { return this.request(`/api/candidates/${year}/${pid}${rowQ(row)}`); }
   driveImageUrl(fid, role)  { return this.url(`/api/drive-image/${fid}?role=${role || "other"}&t=${encodeURIComponent(this.token || "")}`); }
   saveDraft(year, pid, recipe, row)  { return this.request(`/api/draft/${year}/${pid}${rowQ(row)}`,  { method: "POST", body: { recipe } }); }
   triggerRender(year, pid, body, row) { return this.request(`/api/render/${year}/${pid}${rowQ(row)}`, { method: "POST", body }); }
@@ -1220,7 +1220,7 @@ async function loadCandidates(pid, token) {
   paintCandidates();
   let cands;
   try {
-    const r = await api.candidates(state.year, pid);
+    const r = await api.candidates(state.year, pid, state.selectedRow);
     if (token !== undefined && token !== loadRowToken) return; // stale — user moved on
     cands = (Array.isArray(r) ? r : (r && r.candidates)) || [];
   } catch (e) {
@@ -1467,7 +1467,7 @@ async function patchSheetField(field, value) {
       }, state.selectedRow);
     }
     // After PATCH we still post draft to update KV view of the recipe.
-    await api.saveDraft(state.year, state.selectedPid, state.recipe);
+    await api.saveDraft(state.year, state.selectedPid, state.recipe, state.selectedRow);
     setPip("saved", "saved");
     state.retryAttempt = 0;
   } catch (e) {
