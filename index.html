@@ -211,122 +211,41 @@
     <div>
       <h3>JW custom_params</h3>
       <div class="params-grid">
-        <!-- Dropdowns match JW Player schema (default_media_parameters.json) EXACTLY.
-             Any value not in the schema is rejected by JW on upload. Some Category
-             values have leading/trailing whitespace ON JW'S SIDE — preserve as-is. -->
+        <!-- DROPDOWNS ARE POPULATED AT BOOT FROM jw_schema.json — DO NOT HAND-EDIT.
+             The schema file is the single source of truth; hand-typed options
+             here would be IGNORED (app.js replaces the contents on load). To
+             change a dropdown, refresh jw_schema.json from JW's dashboard. -->
         <div class="field-r"><label>Site</label>
-          <select data-field="site">
-            <option value="">—</option>
-            <option>Apartment Therapy</option>
-            <option>The Kitchn</option>
-            <option>Cubby</option>
-            <option>Dorm Therapy</option>
-          </select>
+          <select data-field="site" data-jw-key="Site"></select>
         </div>
         <div class="field-r"><label>Branded</label>
-          <select data-field="branded"><option value="">—</option><option>No</option><option>Yes</option></select>
+          <select data-field="branded" data-jw-key="Branded"></select>
         </div>
         <div class="field-r"><label>Format</label>
-          <select data-field="format">
-            <option value="">—</option>
-            <option>Recipe</option>
-            <option>House Tour</option>
-            <option>Advice</option>
-            <option>Before &amp; After</option>
-            <option>Compilation</option>
-            <option>How To</option>
-            <option>Product Review</option>
-            <option>Promo</option>
-            <option>OTHER</option>
-          </select>
+          <select data-field="format" data-jw-key="Format"></select>
         </div>
         <div class="field-r"><label>Category</label>
-          <select data-field="category">
-            <option value="">—</option>
-            <option>Cleaning</option>
-            <option>College Life</option>
-            <option>Decorating</option>
-            <option>Dorm Decor</option>
-            <option>Family Homes</option>
-            <option value=" Groceries"> Groceries</option>
-            <option>Home Projects</option>
-            <option value=" Kid Food"> Kid Food</option>
-            <option value=" Kids' Rooms"> Kids' Rooms</option>
-            <option value=" Kitchen"> Kitchen</option>
-            <option value=" Living"> Living</option>
-            <option>Organizing</option>
-            <option value=" People"> People</option>
-            <option>Plants &amp; Yards</option>
-            <option>Real Estate</option>
-            <option>Recipes</option>
-            <option>Shopping</option>
-            <option>Skills</option>
-            <option value="Tours ">Tours </option>
-            <option>Toys &amp; Play</option>
-          </select>
+          <select data-field="category" data-jw-key="Category"></select>
         </div>
         <div class="field-r"><label>Duration</label>
-          <select data-field="duration">
-            <option value="">—</option>
-            <option>Under 2 Minutes</option>
-            <option>Over 2 Minutes</option>
-          </select>
+          <select data-field="duration" data-jw-key="Duration"></select>
         </div>
         <div class="field-r"><label>Orientation</label>
-          <select data-field="orientation">
-            <option value="">—</option>
-            <option>Horizontal</option>
-            <option>Vertical</option>
-          </select>
+          <select data-field="orientation" data-jw-key="Orientation"></select>
         </div>
         <div class="field-r"><label>Recipe_Cat</label>
-          <select data-field="recipe_category">
-            <option value="">—</option>
-            <option>Breakfast &amp; Brunch</option>
-            <option>Dessert</option>
-            <option>Dinner</option>
-            <option>Drinks</option>
-            <option>Lunch</option>
-            <option>Snacks &amp; Sides</option>
-          </select>
+          <select data-field="recipe_category" data-jw-key="Recipe_Category"></select>
         </div>
         <div class="field-r"><label>Seasonal</label>
-          <select data-field="seasonal">
-            <option value="">—</option>
-            <option>4th of July</option>
-            <option>Christmas</option>
-            <option>Easter</option>
-            <option>Halloween</option>
-            <option>Hanukkah</option>
-            <option>Passover</option>
-            <option>St. Patrick's Day</option>
-            <option>Thanksgiving</option>
-            <option>Valentine's Day</option>
-            <option>Back to School</option>
-            <option>Fall</option>
-            <option>Winter</option>
-            <option>Spring</option>
-            <option>Summer</option>
-          </select>
+          <select data-field="seasonal" data-jw-key="Seasonal"></select>
         </div>
         <div class="field-r"><label>Series</label>
-          <select data-field="series">
-            <option value="">—</option>
-            <option>Design Defined</option>
-            <option>Extended House Tours</option>
-            <option>Friends with Houses</option>
-            <option>So Glad You Asked</option>
-            <option>Wow I Made That!</option>
-          </select>
+          <select data-field="series" data-jw-key="Series"></select>
         </div>
         <div class="field-r"><label>Sponsor</label><input data-field="sponsoring_brand" autocomplete="off"></div>
         <div class="field-r"><label>Talent</label><input data-field="talent_name" autocomplete="off"></div>
         <div class="field-r"><label>Talent_Pres</label>
-          <select data-field="talent_presence">
-            <option value="">—</option>
-            <option>No Host</option>
-            <option>Talent Hosted</option>
-          </select>
+          <select data-field="talent_presence" data-jw-key="Talent_Presence"></select>
         </div>
         <div class="field-r"><label>Tour_City</label><input data-field="tour_city" autocomplete="off"></div>
         <div class="field-r grid-span-2"><label>Review Status</label>

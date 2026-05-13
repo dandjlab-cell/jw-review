@@ -1984,6 +1984,49 @@ function moveSelection(delta) {
 window.addEventListener("online",  () => { state.online = true;  if (state.pipState === "offline") setPip("idle", "online"); });
 window.addEventListener("offline", () => { state.online = false; setPip("offline", "offline"); });
 
+/* ─────────────────────── JW schema → dropdowns ─────────────────────── */
+// jw_schema.json is the canonical source of truth for the 13 JW custom_params.
+// Hand-typing options into index.html is futile — this function wipes any
+// existing children on every <select data-jw-key="..."> and rebuilds them
+// from the schema, preserving whitespace exactly as JW Player has it.
+async function populateJwDropdowns() {
+  let schema;
+  try {
+    const r = await fetch(`./jw_schema.json?v=${Date.now()}`);
+    if (!r.ok) throw new Error(`schema fetch ${r.status}`);
+    schema = await r.json();
+  } catch (e) {
+    console.error("populateJwDropdowns: schema fetch failed", e);
+    // Hard fail: a broken dropdown is worse than no dropdown — leave the
+    // <select> elements empty so reviewers immediately notice.
+    toast("JW schema failed to load — dropdowns disabled until reload", "error");
+    return;
+  }
+  const selects = document.querySelectorAll("select[data-jw-key]");
+  for (const sel of selects) {
+    const key = sel.dataset.jwKey;
+    const entry = schema[key];
+    if (!entry || !Array.isArray(entry.default_values)) {
+      console.warn(`populateJwDropdowns: no schema for ${key}`);
+      continue;
+    }
+    sel.innerHTML = "";
+    // Always lead with the "—" placeholder for the unset state. Schema's own
+    // leading "" sentinel is dropped — we render our own placeholder instead.
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "—";
+    sel.appendChild(placeholder);
+    for (const v of entry.default_values) {
+      if (v === "") continue;
+      const opt = document.createElement("option");
+      opt.value = v;          // preserve whitespace byte-for-byte
+      opt.textContent = v;
+      sel.appendChild(opt);
+    }
+  }
+}
+
 /* ─────────────────────── Boot ─────────────────────── */
 
 async function boot() {
@@ -1991,6 +2034,11 @@ async function boot() {
   bindFieldEvents();
   bindModalEvents();
   bindKeyboard();
+
+  // Populate JW custom_params dropdowns from the schema BEFORE anything else
+  // can render a row. The HTML carries empty <select data-jw-key="..."> stubs
+  // — jw_schema.json is the single source of truth for option values.
+  await populateJwDropdowns();
 
   // First-run gate.
   if (!settingsComplete(getSettings())) {

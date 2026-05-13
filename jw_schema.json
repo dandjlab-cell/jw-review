@@ -1,0 +1,171 @@
+{
+  "Branded": {
+    "name": "Branded",
+    "type": "dropdown",
+    "required": false,
+    "default_values": [
+      "No",
+      "Yes"
+    ]
+  },
+  "Category": {
+    "name": "Category",
+    "type": "dropdown",
+    "required": true,
+    "default_values": [
+      "",
+      "Cleaning",
+      "College Life",
+      "Decorating",
+      "Dorm Decor",
+      "Family Homes",
+      " Groceries",
+      "Home Projects",
+      " Kid Food",
+      " Kids' Rooms",
+      " Kitchen",
+      " Living",
+      "Organizing",
+      " People",
+      "Plants & Yards",
+      "Real Estate",
+      "Recipes",
+      "Shopping",
+      "Skills",
+      "Tours ",
+      "Toys & Play"
+    ]
+  },
+  "Duration": {
+    "name": "Duration",
+    "type": "dropdown",
+    "required": true,
+    "default_values": [
+      "",
+      "Under 2 Minutes",
+      "Over 2 Minutes"
+    ]
+  },
+  "Format": {
+    "name": "Format",
+    "type": "dropdown",
+    "required": true,
+    "default_values": [
+      "",
+      "Recipe",
+      "House Tour",
+      "Advice",
+      "Before & After",
+      "Compilation",
+      "How To",
+      "Product Review",
+      "Promo",
+      "OTHER"
+    ]
+  },
+  "Orientation": {
+    "name": "Orientation",
+    "type": "dropdown",
+    "required": true,
+    "default_values": [
+      "",
+      "Horizontal",
+      "Vertical"
+    ]
+  },
+  "Recipe_Category": {
+    "name": "Recipe_Category",
+    "type": "dropdown",
+    "required": false,
+    "default_values": [
+      "",
+      "Breakfast & Brunch",
+      "Dessert",
+      "Dinner",
+      "Drinks",
+      "Lunch",
+      "Snacks & Sides"
+    ]
+  },
+  "Seasonal": {
+    "name": "Seasonal",
+    "type": "dropdown",
+    "required": false,
+    "default_values": [
+      "",
+      "4th of July",
+      "Christmas",
+      "Easter",
+      "Halloween",
+      "Hanukkah",
+      "Passover",
+      "St. Patrick's Day",
+      "Thanksgiving",
+      "Valentine's Day",
+      "Back to School",
+      "Fall",
+      "Winter",
+      "Spring",
+      "Summer"
+    ]
+  },
+  "Series": {
+    "name": "Series",
+    "type": "dropdown",
+    "required": false,
+    "default_values": [
+      "",
+      "Design Defined",
+      "Extended House Tours",
+      "Friends with Houses",
+      "So Glad You Asked",
+      "Wow I Made That!"
+    ]
+  },
+  "Site": {
+    "name": "Site",
+    "type": "dropdown",
+    "required": true,
+    "default_values": [
+      "",
+      "Apartment Therapy",
+      "The Kitchn",
+      "Cubby",
+      "Dorm Therapy"
+    ]
+  },
+  "Sponsoring_Brand": {
+    "name": "Sponsoring_Brand",
+    "type": "text",
+    "required": false,
+    "default_values": [
+      ""
+    ]
+  },
+  "Talent_Name": {
+    "name": "Talent_Name",
+    "type": "text",
+    "required": false,
+    "default_values": [
+      ""
+    ]
+  },
+  "Talent_Presence": {
+    "name": "Talent_Presence",
+    "type": "dropdown",
+    "required": true,
+    "default_values": [
+      "",
+      "No Host",
+      "Talent Hosted"
+    ]
+  },
+  "Tour_City": {
+    "name": "Tour_City",
+    "type": "text",
+    "required": false,
+    "default_values": [
+      ""
+    ]
+  }
+}
