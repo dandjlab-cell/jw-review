@@ -461,11 +461,11 @@ a { color: var(--ink); text-decoration: none; }
   text-transform: uppercase;
   z-index: 1;
 }
-.candidate .pick-label.primary {
+.candidate .pick-label.is-primary {
   background: var(--good);
   color: white;
 }
-.candidate .pick-label.alt {
+.candidate .pick-label.is-alt {
   background: rgba(43, 138, 77, 0.55);
   color: white;
 }

@@ -1229,11 +1229,11 @@ function paintCandidates() {
     if (isPicked) elt.append(el("div", { class: "badge-mini" }, "Picked"));
     // Codex pick role takes priority over source-based labels.
     if (c.pick_role === "primary") {
-      elt.append(el("div", { class: "pick-label primary" }, "★ Primary"));
+      elt.append(el("div", { class: "pick-label is-primary" }, "★ Primary"));
     } else if (c.pick_role === "alt1") {
-      elt.append(el("div", { class: "pick-label alt" }, "Alt 1"));
+      elt.append(el("div", { class: "pick-label is-alt" }, "Alt 1"));
     } else if (c.pick_role === "alt2") {
-      elt.append(el("div", { class: "pick-label alt" }, "Alt 2"));
+      elt.append(el("div", { class: "pick-label is-alt" }, "Alt 2"));
     } else if (c.source === "cloudinary") {
       elt.append(el("div", { class: "gemini-rank cloudinary-tag" }, "Cloudinary"));
     } else if (c.source === "pro" && c.gemini_rank != null) {
