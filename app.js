@@ -280,6 +280,9 @@ class ApiClient {
     if (reason) body.reason = reason;
     return this.request(`/api/approve/${year}/${pid}`, { method: "POST", body });
   }
+  // Presence: POST = heartbeat for this tab, GET = list active viewers (60s TTL on the worker).
+  presenceBeat(name) { return this.request("/api/presence", { method: "POST", body: { name } }); }
+  presenceList()     { return this.request("/api/presence"); }
 }
 
 const api = new ApiClient();
@@ -1897,6 +1900,10 @@ function bindModalEvents() {
     closeSettingsModal();
     toast("Signed in", "success");
     handleRoute(); // re-fetch
+    // First-run path: boot() returns before reaching startPresenceLoop() when
+    // settings are missing. Start it here so the count starts ticking on save.
+    // Idempotent — no-ops if already running.
+    startPresenceLoop();
   });
   $("#modal-cancel").addEventListener("click", () => {
     if (settingsComplete(getSettings())) closeSettingsModal();
@@ -1995,6 +2002,54 @@ async function boot() {
   await handleRoute();
   // Periodic progress refresh — cheap.
   setInterval(paintProgress, POLL_PROGRESS_MS);
+  // Presence: send a heartbeat + refresh the count immediately, then every 30s
+  // while the tab is open. Worker TTL is 60s so 30s gives a 2× safety margin.
+  startPresenceLoop();
+}
+
+const PRESENCE_BEAT_MS = 30000;
+let _presenceTimer = null;
+let _presenceTickSeq = 0;     // monotonic sequence; a stale tick is one whose
+                              // seq < seqAtStart of any newer tick that finished first.
+let _presenceLastApplied = 0; // highest seq that has applied a UI update.
+async function presenceTick() {
+  const seq = ++_presenceTickSeq;
+  const name = (api.reviewer || "").trim();
+  try {
+    // Heartbeat first so our own entry is counted in the GET response.
+    await api.presenceBeat(name);
+    const { count } = await api.presenceList();
+    // Drop stale results: if a newer tick has already updated the UI, ignore.
+    if (seq < _presenceLastApplied) return;
+    _presenceLastApplied = seq;
+    const el = document.getElementById("presence-meta");
+    const cn = document.getElementById("presence-count");
+    if (el && cn) {
+      cn.textContent = String(count);
+      el.hidden = false;
+    }
+  } catch (e) {
+    // Soft feature — never surface errors. Only hide the chip if THIS tick is
+    // the latest; a later in-flight tick may still succeed and re-show it.
+    if (seq < _presenceLastApplied) return;
+    _presenceLastApplied = seq;
+    const el = document.getElementById("presence-meta");
+    if (el) el.hidden = true;
+  }
+}
+function startPresenceLoop() {
+  if (_presenceTimer) return;
+  presenceTick();
+  _presenceTimer = setInterval(presenceTick, PRESENCE_BEAT_MS);
+  // Pause when the tab goes hidden — no point heartbeating an unattended tab.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (_presenceTimer) { clearInterval(_presenceTimer); _presenceTimer = null; }
+    } else if (!_presenceTimer) {
+      presenceTick();
+      _presenceTimer = setInterval(presenceTick, PRESENCE_BEAT_MS);
+    }
+  });
 }
 
 // DOMContentLoaded has likely already fired (we're loaded dynamically with
