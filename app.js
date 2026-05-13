@@ -906,19 +906,17 @@ function paintLinks(row) {
 function paintOverlayPng() {
   const override = state.overlayOverride || "";
   const autoKey = `${state.recipe.brand || ""}|${state.recipe.format || ""}`;
-  // Dynamic overlay resolution (per Dan, 2026-05-13):
-  //   * If the row is house-tour content (Format in {House Tour, Before & After,
-  //     Compilation}) AND has Tour_City data, use the 3-field House Tour overlay
-  //     regardless of the literal Format value. The 3-field template is the
-  //     canonical way to surface house-tour content when we have the metadata.
-  //   * If Format is one of those AT-tour formats but Tour_City is missing,
-  //     fall back to the Compilation pink card.
-  //   * Otherwise keep the format-based mapping.
+  // Overlay resolution (per Dan, 2026-05-13 — final):
+  //   * AT|House Tour + Tour_City   → 3-field template (LOCATION/SIZE/HOME TYPE)
+  //   * AT|House Tour without city  → AT|Compilation pink (house-tour alt)
+  //   * AT|Before & After + AT|Compilation → ALWAYS AT|Compilation pink,
+  //     so they render visually distinct from 3-field HTs (renders thumb_title
+  //     as a single block, not split by ·).
+  //   * Other formats unchanged.
   let effectiveAutoKey = autoKey;
   const tourCity = (state.currentRow?.tour_city || "").trim();
-  const houseTourFormats = new Set(["House Tour", "Before & After", "Compilation"]);
-  if (state.recipe.brand === "AT" && houseTourFormats.has(state.recipe.format)) {
-    effectiveAutoKey = tourCity ? "AT|House Tour" : "AT|Compilation";
+  if (autoKey === "AT|House Tour" && !tourCity) {
+    effectiveAutoKey = "AT|Compilation";
   }
   const key = override || effectiveAutoKey;
   const overlay = OVERLAY_MAP[key];
@@ -957,8 +955,7 @@ function paintOverlayPng() {
 }
 
 /* Map a brand|format override key back to brand+format for geom lookup.
-   Mirrors the dynamic rule in paintOverlayPng so fitOverlayText uses the
-   same geometry as the rendered overlay. */
+   Mirrors the rule in paintOverlayPng so fitOverlayText uses the same geom. */
 function activeOverlayBrandFormat() {
   const override = state.overlayOverride || "";
   if (override && override.includes("|")) {
@@ -968,9 +965,11 @@ function activeOverlayBrandFormat() {
   let brand = state.recipe.brand;
   let format = state.recipe.format;
   const tourCity = (state.currentRow?.tour_city || "").trim();
-  const houseTourFormats = new Set(["House Tour", "Before & After", "Compilation"]);
-  if (brand === "AT" && houseTourFormats.has(format)) {
-    format = tourCity ? "House Tour" : "Compilation";
+  // Only HT auto-falls-back when missing Tour_City. B&A and Compilation
+  // stay on their own format (= Compilation overlay) to remain visually
+  // distinct from 3-field House Tour rows.
+  if (brand === "AT" && format === "House Tour" && !tourCity) {
+    format = "Compilation";
   }
   return { brand, format };
 }
