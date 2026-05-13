@@ -516,11 +516,14 @@ function paintFilterCounts() {
 }
 
 function pushStatusBucket(ps) {
-  if (!ps) return "Ready";
+  // Empty push_status = row not yet reviewed/approved. Distinct from "Ready"
+  // (which means an approved row queued for push). Empty maps to "Pending".
+  if (!ps) return "Pending";
+  if (ps === "Ready") return "Ready";
   if (ps.startsWith("Hold")) return "Hold";
   if (ps === "Excluded") return "Excluded";
   if (ps === "Uploaded") return "Uploaded";
-  return "Ready";
+  return "Pending";
 }
 
 function bindFilterClicks() {
@@ -612,6 +615,7 @@ function dotClass(ps) {
   if (b === "Uploaded") return "dot-uploaded";
   if (b === "Excluded") return "dot-excluded";
   if (b === "Hold") return "dot-hold";
+  if (b === "Pending") return "dot-pending";
   return "dot-other";
 }
 

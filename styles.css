@@ -234,6 +234,7 @@ a { color: var(--ink); text-decoration: none; }
 .dot-uploaded { background: var(--status-uploaded); }
 .dot-excluded { background: var(--status-excluded); }
 .dot-hold { background: var(--status-hold); }
+.dot-pending { background: #cfc8b3; border: 1px solid var(--rule); }  /* unreviewed — pale grey */
 .dot-other { background: var(--ink-muted); }
 
 /* ========== CENTER ========== */
