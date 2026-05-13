@@ -237,10 +237,11 @@ a { color: var(--ink); text-decoration: none; }
   letter-spacing: 0.06em;
   line-height: 1.4;
 }
-.music-pill.is-swap { background: #FFE8C2; color: #7A4A00; }
-.music-pill.is-add  { background: #DDEEFF; color: #1F4A8C; }
-.music-pill.is-keep { background: #DCEFD8; color: #2C5E1F; }
-.music-pill.is-flag { background: #FCD7D7; color: #842121; }
+.music-pill.is-swap    { background: #FFE8C2; color: #7A4A00; }
+.music-pill.is-swapped { background: #C8E6C9; color: #1B5E20; }
+.music-pill.is-add     { background: #DDEEFF; color: #1F4A8C; }
+.music-pill.is-keep    { background: #DCEFD8; color: #2C5E1F; }
+.music-pill.is-flag    { background: #FCD7D7; color: #842121; }
 .row-item .dot { margin-top: 4px; }
 .dot {
   width: 8px; height: 8px; border-radius: 50%;

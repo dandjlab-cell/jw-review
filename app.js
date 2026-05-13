@@ -626,6 +626,10 @@ function musicPillFor(licenseAction, musicVerdict) {
     cls += " is-swap";
     label = "MUSIC SWAP";
     title = "Queued / in-progress music swap (WCPM library)";
+  } else if (la === "swapped") {
+    cls += " is-swapped";
+    label = "SWAPPED";
+    title = "Music swap complete — Video Asset points at new _JW.mp4 (WCPM)";
   } else if (la === "add_music" || la === "add music") {
     cls += " is-add";
     label = "ADD MUSIC";
