@@ -904,14 +904,19 @@ function paintLinks(row) {
 function paintOverlayPng() {
   const override = state.overlayOverride || "";
   const autoKey = `${state.recipe.brand || ""}|${state.recipe.format || ""}`;
-  // Dynamic fallback (per Dan, 2026-05-13): AT|House Tour rows that LACK
-  // Tour_City data don't fit the 3-field overlay, so fall through to the
-  // AT|Compilation pink card (the "house tour alt"). Reviewer can still
-  // override via the picker.
+  // Dynamic overlay resolution (per Dan, 2026-05-13):
+  //   * If the row is house-tour content (Format in {House Tour, Before & After,
+  //     Compilation}) AND has Tour_City data, use the 3-field House Tour overlay
+  //     regardless of the literal Format value. The 3-field template is the
+  //     canonical way to surface house-tour content when we have the metadata.
+  //   * If Format is one of those AT-tour formats but Tour_City is missing,
+  //     fall back to the Compilation pink card.
+  //   * Otherwise keep the format-based mapping.
   let effectiveAutoKey = autoKey;
   const tourCity = (state.currentRow?.tour_city || "").trim();
-  if (autoKey === "AT|House Tour" && !tourCity) {
-    effectiveAutoKey = "AT|Compilation";
+  const houseTourFormats = new Set(["House Tour", "Before & After", "Compilation"]);
+  if (state.recipe.brand === "AT" && houseTourFormats.has(state.recipe.format)) {
+    effectiveAutoKey = tourCity ? "AT|House Tour" : "AT|Compilation";
   }
   const key = override || effectiveAutoKey;
   const overlay = OVERLAY_MAP[key];
@@ -950,8 +955,8 @@ function paintOverlayPng() {
 }
 
 /* Map a brand|format override key back to brand+format for geom lookup.
-   Also applies the same AT|House Tour → Compilation fallback as paintOverlayPng,
-   so fitOverlayText uses the same geometry as the rendered overlay. */
+   Mirrors the dynamic rule in paintOverlayPng so fitOverlayText uses the
+   same geometry as the rendered overlay. */
 function activeOverlayBrandFormat() {
   const override = state.overlayOverride || "";
   if (override && override.includes("|")) {
@@ -961,8 +966,9 @@ function activeOverlayBrandFormat() {
   let brand = state.recipe.brand;
   let format = state.recipe.format;
   const tourCity = (state.currentRow?.tour_city || "").trim();
-  if (brand === "AT" && format === "House Tour" && !tourCity) {
-    format = "Compilation";
+  const houseTourFormats = new Set(["House Tour", "Before & After", "Compilation"]);
+  if (brand === "AT" && houseTourFormats.has(format)) {
+    format = tourCity ? "House Tour" : "Compilation";
   }
   return { brand, format };
 }
