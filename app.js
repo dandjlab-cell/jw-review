@@ -30,14 +30,27 @@ const FONT_MAX_PT_DEFAULT = 76;
 const FONT_MIN_PT = FONT_MIN_PT_DEFAULT;
 const FONT_MAX_PT = FONT_MAX_PT_DEFAULT;
 
-/* Brand+format → overlay PNG (live preview only). PLAN §12. */
+/* Brand+format → overlay PNG (live preview only). PLAN §12.
+ * Formats without a dedicated overlay yet (Before & After, Promo, Advice)
+ * fall back to a visually-close AT stand-in so SOMETHING renders. Reviewer
+ * can override via the picker below the thumb. Replace with real PNGs when
+ * the designer ships them. */
 const OVERLAY_MAP = {
   "Kitchn|Recipe":          "assets/overlays/kitchn_recipe_overlay.png",
   "Kitchn|Compilation":     "assets/overlays/kitchn_recipe_overlay.png",
+  "Kitchn|How To":          "assets/overlays/kitchn_recipe_overlay.png",
+  "Kitchn|Promo":           "assets/overlays/kitchn_recipe_overlay.png",
+  "Kitchn|Product Review":  "assets/overlays/kitchn_recipe_overlay.png",
+  "Kitchn|Before & After":  "assets/overlays/kitchn_recipe_overlay.png",
+  "Kitchn|Advice":          "assets/overlays/kitchn_recipe_overlay.png",
   "AT|Compilation":         "assets/overlays/at_ht_compilation_overlay.png",
   "AT|House Tour":          "assets/overlays/at_ht_overlay.png",
   "AT|How To":              "assets/overlays/at_diy_overlay.png",
   "AT|Product Review":      "assets/overlays/at_product_overlay.png",
+  // Stand-ins until dedicated overlays ship:
+  "AT|Before & After":      "assets/overlays/at_diy_overlay.png",      // yellow card (AT DIY) — closest brand stand-in
+  "AT|Promo":               "assets/overlays/at_ht_compilation_overlay.png", // pink AT Compilation
+  "AT|Advice":              "assets/overlays/at_diy_overlay.png",      // yellow card stand-in
 };
 
 /* Human-readable labels for the manual template-override picker. */
@@ -84,6 +97,18 @@ const OVERLAY_GEOM = {
   // title safe area y=1615..1771 → top:84.115%, bot:7.760%.
   // Card x=132..946 with 50px pad → left:16.85%, right:17.04%.
   "AT|Product Review":  { top: 84.115, bot: 7.76, left: 16.85, right: 17.04, fontMax: 64, fontMin: 44 },
+  // Stand-in formats — borrow geometry from the overlay PNG they share until
+  // dedicated overlays ship. AT|Before & After + AT|Advice reuse AT|How To
+  // (at_diy_overlay.png). AT|Promo reuses AT|Compilation (at_ht_compilation_overlay.png).
+  // Kitchn fallbacks reuse Kitchn|Recipe.
+  "AT|Before & After":  { top: 84.43,  bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  "AT|Advice":          { top: 84.43,  bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  "AT|Promo":           { top: 84.22,  bot: 7.19, left: 10.56, right: 11.02, fontMax: 64, fontMin: 44 },
+  "Kitchn|How To":         { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
+  "Kitchn|Promo":          { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
+  "Kitchn|Product Review": { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
+  "Kitchn|Before & After": { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
+  "Kitchn|Advice":         { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
 };
 
 function getOverlayGeom(brand, format) {
