@@ -592,7 +592,11 @@ function paintRowList() {
     item.append(
       thumb,
       el("div", { class: "info" },
-        el("div", { class: "pid" }, r.pid),
+        el("div", { class: "pid" },
+          el("span", { class: "row-num" }, `#${r.row}`),
+          " · ",
+          r.pid,
+        ),
         el("div", { class: "title" }, r.title || "(untitled)"),
         el("div", { class: "meta" }, [r.format, r.duration].filter(Boolean).join(" · ")),
       ),

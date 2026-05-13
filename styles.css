@@ -206,6 +206,10 @@ a { color: var(--ink); text-decoration: none; }
   font-size: 10px; font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 }
+.row-item .info .pid .row-num {
+  color: var(--ink);
+  font-weight: 600;
+}
 .row-item .info .title {
   color: var(--ink);
   font-size: 12px;
