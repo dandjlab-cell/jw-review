@@ -211,11 +211,16 @@
     <div>
       <h3>JW custom_params</h3>
       <div class="params-grid">
+        <!-- Dropdowns match JW Player schema (default_media_parameters.json) EXACTLY.
+             Any value not in the schema is rejected by JW on upload. Some Category
+             values have leading/trailing whitespace ON JW'S SIDE — preserve as-is. -->
         <div class="field-r"><label>Site</label>
           <select data-field="site">
             <option value="">—</option>
-            <option>The Kitchn</option>
             <option>Apartment Therapy</option>
+            <option>The Kitchn</option>
+            <option>Cubby</option>
+            <option>Dorm Therapy</option>
           </select>
         </div>
         <div class="field-r"><label>Branded</label>
@@ -224,44 +229,103 @@
         <div class="field-r"><label>Format</label>
           <select data-field="format">
             <option value="">—</option>
-            <option>Recipe</option><option>House Tour</option><option>Compilation</option><option>How To</option><option>DIY</option>
+            <option>Recipe</option>
+            <option>House Tour</option>
+            <option>Advice</option>
+            <option>Before &amp; After</option>
+            <option>Compilation</option>
+            <option>How To</option>
+            <option>Product Review</option>
+            <option>Promo</option>
+            <option>OTHER</option>
           </select>
         </div>
         <div class="field-r"><label>Category</label>
           <select data-field="category">
             <option value="">—</option>
-            <option>Recipe</option><option>Tours</option><option>How To</option><option>DIY</option>
+            <option>Cleaning</option>
+            <option>College Life</option>
+            <option>Decorating</option>
+            <option>Dorm Decor</option>
+            <option>Family Homes</option>
+            <option value=" Groceries"> Groceries</option>
+            <option>Home Projects</option>
+            <option value=" Kid Food"> Kid Food</option>
+            <option value=" Kids' Rooms"> Kids' Rooms</option>
+            <option value=" Kitchen"> Kitchen</option>
+            <option value=" Living"> Living</option>
+            <option>Organizing</option>
+            <option value=" People"> People</option>
+            <option>Plants &amp; Yards</option>
+            <option>Real Estate</option>
+            <option>Recipes</option>
+            <option>Shopping</option>
+            <option>Skills</option>
+            <option value="Tours ">Tours </option>
+            <option>Toys &amp; Play</option>
           </select>
         </div>
         <div class="field-r"><label>Duration</label>
           <select data-field="duration">
             <option value="">—</option>
-            <option>Under 2 Min</option><option>2-5 Min</option><option>5+ Min</option>
+            <option>Under 2 Minutes</option>
+            <option>Over 2 Minutes</option>
           </select>
         </div>
         <div class="field-r"><label>Orientation</label>
           <select data-field="orientation">
-            <option value="">—</option><option>Vertical</option><option>Horizontal</option>
+            <option value="">—</option>
+            <option>Horizontal</option>
+            <option>Vertical</option>
           </select>
         </div>
         <div class="field-r"><label>Recipe_Cat</label>
           <select data-field="recipe_category">
             <option value="">—</option>
-            <option>Snacks &amp; Sides</option><option>Mains</option><option>Desserts</option><option>Drinks</option><option>Breakfast</option>
+            <option>Breakfast &amp; Brunch</option>
+            <option>Dessert</option>
+            <option>Dinner</option>
+            <option>Drinks</option>
+            <option>Lunch</option>
+            <option>Snacks &amp; Sides</option>
           </select>
         </div>
         <div class="field-r"><label>Seasonal</label>
           <select data-field="seasonal">
-            <option value="">—</option><option>Spring</option><option>Summer</option><option>Fall</option><option>Winter</option><option>Holiday</option>
+            <option value="">—</option>
+            <option>4th of July</option>
+            <option>Christmas</option>
+            <option>Easter</option>
+            <option>Halloween</option>
+            <option>Hanukkah</option>
+            <option>Passover</option>
+            <option>St. Patrick's Day</option>
+            <option>Thanksgiving</option>
+            <option>Valentine's Day</option>
+            <option>Back to School</option>
+            <option>Fall</option>
+            <option>Winter</option>
+            <option>Spring</option>
+            <option>Summer</option>
           </select>
         </div>
-        <div class="field-r"><label>Series</label><input data-field="series" autocomplete="off"></div>
+        <div class="field-r"><label>Series</label>
+          <select data-field="series">
+            <option value="">—</option>
+            <option>Design Defined</option>
+            <option>Extended House Tours</option>
+            <option>Friends with Houses</option>
+            <option>So Glad You Asked</option>
+            <option>Wow I Made That!</option>
+          </select>
+        </div>
         <div class="field-r"><label>Sponsor</label><input data-field="sponsoring_brand" autocomplete="off"></div>
         <div class="field-r"><label>Talent</label><input data-field="talent_name" autocomplete="off"></div>
         <div class="field-r"><label>Talent_Pres</label>
           <select data-field="talent_presence">
             <option value="">—</option>
-            <option>Talent Hosted</option><option>Hands Only</option><option>No Host</option>
+            <option>No Host</option>
+            <option>Talent Hosted</option>
           </select>
         </div>
         <div class="field-r"><label>Tour_City</label><input data-field="tour_city" autocomplete="off"></div>
