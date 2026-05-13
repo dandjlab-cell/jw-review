@@ -297,6 +297,8 @@ const state = {
   },
   search: "",
   selectedPid: null,
+  selectedRow: null,     // sheet row number — unique even for dup-pid variants;
+                         // drives row-list selection class + J/K nav indexing.
   currentRow: null,    // detailed row payload from /api/rows/:y/:p
   candidates: [],      // [{ file_id, gemini_rank, gemini_score }]
   candidatesPid: null, // pid that state.candidates belongs to (drops stale paints)
@@ -438,6 +440,16 @@ async function handleRoute() {
     paintFilters();
     if (!state.rows.length) await loadRows();
     state.selectedPid = r.pid;
+    // Resolve selectedRow: keep current if it matches this pid (e.g., user
+    // clicked a specific dup-pid variant); else pick the FIRST row with this pid.
+    if (state.selectedRow != null) {
+      const r2 = state.rows.find(x => x.row === state.selectedRow);
+      if (!r2 || r2.pid !== r.pid) state.selectedRow = null;
+    }
+    if (state.selectedRow == null) {
+      const firstMatch = state.rows.find(x => x.pid === r.pid);
+      if (firstMatch) state.selectedRow = firstMatch.row;
+    }
     paintRowList();
     await loadRow(r.pid);
     return;
@@ -553,10 +565,18 @@ function paintRowList() {
   }
   list.innerHTML = "";
   for (const r of rows) {
+    // Selection by row number (unique). For dup-pid rows this means only the
+    // specific variant the user clicked highlights, not all rows sharing the pid.
+    const isSelected = (state.selectedRow != null)
+      ? (r.row === state.selectedRow)
+      : (r.pid === state.selectedPid);
     const item = el("div", {
-      class: "row-item" + (r.pid === state.selectedPid ? " selected" : ""),
-      dataset: { pid: r.pid },
-      onclick: () => navigate(rowPath(state.year, r.pid)),
+      class: "row-item" + (isSelected ? " selected" : ""),
+      dataset: { pid: r.pid, row: r.row },
+      onclick: () => {
+        state.selectedRow = r.row;
+        navigate(rowPath(state.year, r.pid));
+      },
     });
     const thumb = el("div", { class: "thumb" });
     if (r.thumb_fid) {
@@ -1873,12 +1893,22 @@ function bindKeyboard() {
 function moveSelection(delta) {
   const rows = filteredRows();
   if (!rows.length) return;
-  const idx = rows.findIndex(r => r.pid === state.selectedPid);
+  // Prefer row-number match (handles dup-pid). Fall back to pid for first nav
+  // after page load when selectedRow isn't set yet.
+  let idx = -1;
+  if (state.selectedRow != null) {
+    idx = rows.findIndex(r => r.row === state.selectedRow);
+  }
+  if (idx < 0) {
+    idx = rows.findIndex(r => r.pid === state.selectedPid);
+  }
   let next = idx + delta;
   if (next < 0) next = 0;
   if (next >= rows.length) next = rows.length - 1;
-  if (rows[next] && rows[next].pid !== state.selectedPid) {
-    navigate(rowPath(state.year, rows[next].pid));
+  const target = rows[next];
+  if (target && target.row !== state.selectedRow) {
+    state.selectedRow = target.row;
+    navigate(rowPath(state.year, target.pid));
   }
 }
 
