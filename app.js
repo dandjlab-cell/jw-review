@@ -281,11 +281,11 @@ class ApiClient {
   patchRow(year, pid, body, row) { return this.request(`/api/rows/${year}/${pid}${rowQ(row)}`, { method: "PATCH", body }); }
   candidates(year, pid)          { return this.request(`/api/candidates/${year}/${pid}`); }
   driveImageUrl(fid, role)  { return this.url(`/api/drive-image/${fid}?role=${role || "other"}&t=${encodeURIComponent(this.token || "")}`); }
-  saveDraft(year, pid, recipe)  { return this.request(`/api/draft/${year}/${pid}`,  { method: "POST", body: { recipe } }); }
-  triggerRender(year, pid, body) { return this.request(`/api/render/${year}/${pid}`, { method: "POST", body }); }
-  uploadFallback(year, pid, blob){ return this.request(`/api/render-fallback/${year}/${pid}`, { method: "POST", body: blob }); }
+  saveDraft(year, pid, recipe, row)  { return this.request(`/api/draft/${year}/${pid}${rowQ(row)}`,  { method: "POST", body: { recipe } }); }
+  triggerRender(year, pid, body, row) { return this.request(`/api/render/${year}/${pid}${rowQ(row)}`, { method: "POST", body }); }
+  uploadFallback(year, pid, blob, row){ return this.request(`/api/render-fallback/${year}/${pid}${rowQ(row)}`, { method: "POST", body: blob }); }
   history(year, pid)        { return this.request(`/api/history/${year}/${pid}`); }
-  restore(year, pid, hid)   { return this.request(`/api/restore/${year}/${pid}`, { method: "POST", body: { history_id: hid } }); }
+  restore(year, pid, hid, row) { return this.request(`/api/restore/${year}/${pid}${rowQ(row)}`, { method: "POST", body: { history_id: hid } }); }
   approve(year, pid, action, reason, row) {
     const body = { action };
     if (reason) body.reason = reason;
@@ -1391,7 +1391,7 @@ function onCandidateClick(fid) {
   // already shows the new candidate; the canonical Drive thumbnail render is
   // deferred until the title blurs (via saveDraftAndScheduleRender with
   // immediateRender:false → debounced) or until Approve fires the push step.
-  api.saveDraft(state.year, state.selectedPid, state.recipe)
+  api.saveDraft(state.year, state.selectedPid, state.recipe, state.selectedRow)
     .catch(e => console.warn("saveDraft (pick_candidate) failed:", e));
 }
 
@@ -1527,7 +1527,7 @@ function saveDraftAndScheduleRender({ action, immediateRender = false }) {
   persistLocalDraft();
   setPip("saving", "saving");
   // Tier 1: post draft to KV + history.
-  api.saveDraft(state.year, state.selectedPid, state.recipe)
+  api.saveDraft(state.year, state.selectedPid, state.recipe, state.selectedRow)
     .then(() => {
       if (immediateRender) {
         return triggerRender();
@@ -1554,7 +1554,7 @@ async function triggerRender() {
     const result = await api.triggerRender(state.year, state.selectedPid, {
       recipe: state.recipe,
       existing_thumbnail_fid: state.currentRow?.thumbnails_asset_fid || null,
-    });
+    }, state.selectedRow);
     state.approximate = false;
     $("#approximate-banner").hidden = true;
     setPip("saved", "saved");
@@ -1572,7 +1572,7 @@ async function triggerRender() {
       try {
         const blob = await renderToCanvasBlob();
         if (blob) {
-          await api.uploadFallback(state.year, state.selectedPid, blob);
+          await api.uploadFallback(state.year, state.selectedPid, blob, state.selectedRow);
           state.approximate = true;
           $("#approximate-banner").hidden = false;
           setPip("approx", "approximate");
@@ -1798,7 +1798,7 @@ async function doRestore(historyId) {
   if (!state.selectedPid) return;
   setPip("saving", "restoring");
   try {
-    await api.restore(state.year, state.selectedPid, historyId);
+    await api.restore(state.year, state.selectedPid, historyId, state.selectedRow);
     setPip("saved", "restored");
     toast("Restored", "success");
     closeHistoryPanel();
