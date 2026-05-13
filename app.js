@@ -218,6 +218,13 @@ function toast(msg, kind = "") {
 
 /* ─────────────────────── API client ─────────────────────── */
 
+// Build the ?row=N suffix when a 1-indexed sheet row is supplied. Returns ""
+// when row is null/undefined/<2 so the URL stays clean for non-dup-pid calls.
+function rowQ(row) {
+  const n = Number(row);
+  return Number.isFinite(n) && n >= 2 ? `?row=${n}` : "";
+}
+
 class ApiClient {
   constructor() { this.refresh(); }
   refresh() {
@@ -266,19 +273,23 @@ class ApiClient {
     const q = new URLSearchParams({ year: String(year), ...filters });
     return this.request(`/api/rows?${q.toString()}`);
   }
-  getRow(year, pid)         { return this.request(`/api/rows/${year}/${pid}`); }
-  patchRow(year, pid, body) { return this.request(`/api/rows/${year}/${pid}`, { method: "PATCH", body }); }
-  candidates(year, pid)     { return this.request(`/api/candidates/${year}/${pid}`); }
+  // Dup-pid disambiguation: when the caller knows which sheet row they're
+  // looking at (state.selectedRow), pass it through as ?row=N. Worker uses
+  // it to pick the right row when PID matches multiple (e.g., 2501AT012 has
+  // both House Tour and Compilation variants).
+  getRow(year, pid, row)         { return this.request(`/api/rows/${year}/${pid}${rowQ(row)}`); }
+  patchRow(year, pid, body, row) { return this.request(`/api/rows/${year}/${pid}${rowQ(row)}`, { method: "PATCH", body }); }
+  candidates(year, pid)          { return this.request(`/api/candidates/${year}/${pid}`); }
   driveImageUrl(fid, role)  { return this.url(`/api/drive-image/${fid}?role=${role || "other"}&t=${encodeURIComponent(this.token || "")}`); }
   saveDraft(year, pid, recipe)  { return this.request(`/api/draft/${year}/${pid}`,  { method: "POST", body: { recipe } }); }
   triggerRender(year, pid, body) { return this.request(`/api/render/${year}/${pid}`, { method: "POST", body }); }
   uploadFallback(year, pid, blob){ return this.request(`/api/render-fallback/${year}/${pid}`, { method: "POST", body: blob }); }
   history(year, pid)        { return this.request(`/api/history/${year}/${pid}`); }
   restore(year, pid, hid)   { return this.request(`/api/restore/${year}/${pid}`, { method: "POST", body: { history_id: hid } }); }
-  approve(year, pid, action, reason) {
+  approve(year, pid, action, reason, row) {
     const body = { action };
     if (reason) body.reason = reason;
-    return this.request(`/api/approve/${year}/${pid}`, { method: "POST", body });
+    return this.request(`/api/approve/${year}/${pid}${rowQ(row)}`, { method: "POST", body });
   }
   // Presence: POST = heartbeat for this tab, GET = list active viewers (60s TTL on the worker).
   presenceBeat(name) { return this.request("/api/presence", { method: "POST", body: { name } }); }
@@ -478,7 +489,15 @@ function paintTopbar() {
 function paintApproveButton() {
   const btn = $("#approve-btn");
   if (!btn) return;
-  const r = state.rowIndex.get(state.selectedPid) || state.currentRow || {};
+  // Prefer the unique sheet row (selectedRow) over PID lookup. rowIndex is
+  // keyed by PID, so dup-pid rows collapse to a single entry — for the
+  // OTHER variant's button state we have to look up by row number. Falls
+  // back to PID then to in-memory currentRow when row isn't tracked yet.
+  let r = null;
+  if (state.selectedRow != null) {
+    r = state.rows.find(x => x.row === state.selectedRow) || null;
+  }
+  if (!r) r = state.rowIndex.get(state.selectedPid) || state.currentRow || {};
   const rs = (r.review_status || "").toUpperCase();
   const isApproved = (rs === "JW APPROVED" || rs === "APPROVED");
   if (isApproved) {
@@ -494,7 +513,13 @@ function paintApproveButton() {
 
 function paintProgress() {
   const all = filteredRows();
-  const done = all.filter(r => r.review_status === "Approved" || r.push_status === "Uploaded").length;
+  // Review-status enum was migrated in 2026-05 from "Approved" -> "JW APPROVED".
+  // Count both for back-compat with rows still on the old enum during transition.
+  const done = all.filter(r =>
+    r.review_status === "JW APPROVED" ||
+    r.review_status === "Approved" ||
+    r.push_status === "Uploaded"
+  ).length;
   const pct = all.length ? Math.round((done / all.length) * 100) : 0;
   $("#progress-meta").textContent = `${done} / ${all.length} reviewed`;
   $("#progress-fill").style.width = pct + "%";
@@ -724,7 +749,10 @@ async function loadRow(pid) {
   }
 
   // Phase 2: row + candidates fire in parallel.
-  const rowP = api.getRow(state.year, pid);
+  // Pass selectedRow so dup-pid variants (e.g. 2501AT012 House Tour vs
+  // Compilation) get disambiguated — without it the worker returns the
+  // first PID match, which leaks one variant's state into the other's panel.
+  const rowP = api.getRow(state.year, pid, state.selectedRow);
   const candP = loadCandidates(pid, token).catch(err => console.warn("candidates load failed:", err));
   let realRow;
   try {
@@ -1415,7 +1443,7 @@ async function patchSheetField(field, value) {
       await api.patchRow(state.year, state.selectedPid, {
         updates: [{ header, value: String(value) }],
         action,
-      });
+      }, state.selectedRow);
     }
     // After PATCH we still post draft to update KV view of the recipe.
     await api.saveDraft(state.year, state.selectedPid, state.recipe);
@@ -1645,11 +1673,14 @@ async function doApproveAction(action, reason) {
   if (!state.selectedPid) return;
   setPip("saving", action);
   try {
-    await api.approve(state.year, state.selectedPid, action, reason);
+    await api.approve(state.year, state.selectedPid, action, reason, state.selectedRow);
     setPip("saved", "saved");
     toast(action === "unapprove" ? "Un-approved" : `${action[0].toUpperCase() + action.slice(1)}d`, "success");
-    // Update local row + advance to next. Values match the worker's new Review Status enum.
-    const r = state.rowIndex.get(state.selectedPid);
+    // Update local row + advance to next. Prefer per-row lookup (state.selectedRow)
+    // over PID — rowIndex is keyed by PID so dup-pid variants collapse to one
+    // entry there. Fall back to PID when row isn't known.
+    const r = (state.selectedRow != null && state.rows.find(x => x.row === state.selectedRow))
+              || state.rowIndex.get(state.selectedPid);
     if (r) {
       if (action === "approve")   { r.review_status = "JW APPROVED"; r.push_status = "Ready"; }
       if (action === "unapprove") { r.review_status = "";            r.push_status = ""; }
