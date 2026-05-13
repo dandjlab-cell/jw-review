@@ -99,14 +99,40 @@
         </div>
       </div>
 
-      <!-- TOP ROW: Video + picked thumbnail + title editor -->
-      <div class="top-row">
+      <!-- CONTENT GRID — 2 rows × 3 cols. picked-thumb spans both rows on
+           the right (large + readable); candidate strip sits below
+           video+editor and is bounded by the picked-thumb column. -->
+      <div class="content-grid">
+
+        <!-- Row 1, Col 1: video -->
         <div class="primary" id="primary-video">
           <video id="video-el" controls preload="metadata" playsinline></video>
           <div class="duration" id="video-duration">–</div>
           <div class="label-overlay">▶ Drive video</div>
         </div>
 
+        <!-- Row 1, Col 2: thumbnail-title editor + link pills -->
+        <div class="editor-and-picker">
+          <div class="title-editor">
+            <div class="row">
+              <label for="thumb-title-input">Thumbnail Title</label>
+              <textarea id="thumb-title-input" rows="2" wrap="soft" autocomplete="off" spellcheck="false"></textarea>
+            </div>
+            <div class="hint">Press Enter to force a line break. Saved on blur.</div>
+          </div>
+
+          <!-- External links -->
+          <div class="links-row" id="links-row">
+            <a class="link-pill" data-key="drive_folder">📁 Drive folder</a>
+            <a class="link-pill" data-key="video_asset">🎬 Video file</a>
+            <a class="link-pill" data-key="hero_file">🖼 Hero file</a>
+            <a class="link-pill" data-key="thumbnails_asset">🖼 Thumbnail file</a>
+            <a class="link-pill" data-key="captions_asset">📝 Captions (SRT)</a>
+            <a class="link-pill" data-key="jw_dashboard">▶ JW dashboard</a>
+          </div>
+        </div>
+
+        <!-- Col 3 (spans both rows): picked thumbnail, large -->
         <div class="pair-card">
           <div class="label">
             Picked Thumbnail
@@ -141,36 +167,17 @@
           </select>
         </div>
 
-        <div class="editor-and-picker">
-          <div class="title-editor">
-            <div class="row">
-              <label for="thumb-title-input">Thumbnail Title</label>
-              <textarea id="thumb-title-input" rows="2" wrap="soft" autocomplete="off" spellcheck="false"></textarea>
-            </div>
-            <div class="hint">Press Enter to force a line break. Saved on blur.</div>
+        <!-- Row 2, spans Col 1+2: candidate strip (boxed by picked-thumb on right) -->
+        <div class="tertiary">
+          <div class="tertiary-head">
+            <h3>Pick a thumbnail</h3>
+            <div class="meta" id="candidates-meta">– candidates</div>
           </div>
-
-          <!-- External links -->
-          <div class="links-row" id="links-row">
-            <a class="link-pill" data-key="drive_folder">📁 Drive folder</a>
-            <a class="link-pill" data-key="video_asset">🎬 Video file</a>
-            <a class="link-pill" data-key="hero_file">🖼 Hero file</a>
-            <a class="link-pill" data-key="thumbnails_asset">🖼 Thumbnail file</a>
-            <a class="link-pill" data-key="captions_asset">📝 Captions (SRT)</a>
-            <a class="link-pill" data-key="jw_dashboard">▶ JW dashboard</a>
+          <div class="picker-strip" id="candidate-strip">
+            <div class="picker-empty">Loading candidates…</div>
           </div>
         </div>
-      </div>
 
-      <!-- CANDIDATE PICKER -->
-      <div class="tertiary">
-        <div class="tertiary-head">
-          <h3>Pick a thumbnail</h3>
-          <div class="meta" id="candidates-meta">– candidates · Gemini-ranked</div>
-        </div>
-        <div class="picker-strip" id="candidate-strip">
-          <div class="picker-empty">Loading candidates…</div>
-        </div>
       </div>
 
     </div>

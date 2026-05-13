@@ -799,7 +799,18 @@ function setField(name, value) {
     elt.value = value || "";
   } else {
     elt.value = value == null ? "" : String(value);
+    if (elt.tagName === "TEXTAREA") autoGrowTextarea(elt);
   }
+}
+
+// Grow a textarea to fit its content. Browsers that support `field-sizing:
+// content` (Chrome 123+, Safari 18+) handle this in CSS; for older browsers
+// this falls back to scrollHeight-based resize. Idempotent and cheap.
+function autoGrowTextarea(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  // +2px avoids a flicker scrollbar at the boundary.
+  el.style.height = (el.scrollHeight + 2) + "px";
 }
 
 function getField(name) {
@@ -1063,7 +1074,12 @@ function evenlySpacedSample(arr, n) {
   return out;
 }
 
-const FRAMES_PREVIEW_COUNT = 6;
+// Default preview count for the candidate strip — only show top picks up front.
+//   3 when ONLY raw frames are available (Codex's top 3 picks once those land;
+//   for now an evenly-spaced sample of 3).
+//   Cloudinary thumbs (curated by the editor) are always shown in addition,
+//   so when both exist the visible count can reach 6.
+const FRAMES_PREVIEW_COUNT = 3;
 
 function paintCandidates() {
   const strip = $("#candidate-strip");
@@ -1610,8 +1626,13 @@ function bindFieldEvents() {
         patchSheetField(elt.dataset.field, v);
       }, DEBOUNCE_MS);
       elt.addEventListener("blur", debouncedBlur);
-      // input writes localStorage so tab-crash recovers.
-      elt.addEventListener("input", () => persistLocalDraft());
+      // input writes localStorage so tab-crash recovers; textarea also grows
+      // to fit content (fallback for browsers without `field-sizing: content`).
+      const isTextarea = elt.tagName === "TEXTAREA";
+      elt.addEventListener("input", () => {
+        persistLocalDraft();
+        if (isTextarea) autoGrowTextarea(elt);
+      });
     }
   }
 

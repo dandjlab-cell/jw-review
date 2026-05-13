@@ -300,14 +300,26 @@ a { color: var(--ink); text-decoration: none; }
 .btn.fix { background: var(--bg-card); border-color: var(--warn); color: var(--warn); }
 .btn.exclude { background: var(--bg-card); border-color: var(--rule); color: var(--ink-muted); }
 
-/* TOP ROW: video / picked / editor */
-.top-row {
+/* CONTENT GRID — 2 rows × 3 cols.
+   Row 1: video (left, compact) · thumb-title editor + links (middle, flex) · picked thumbnail (right)
+   Row 2: candidate strip spans cols 1+2; picked-thumb continues spanning rows 1-2.
+   Picked-thumb at 260px wide gives ~462px tall (9:16) — large enough that the
+   overlay copy is readable. Candidate strip is boxed by video/editor above
+   and picked-thumb to the right. */
+.content-grid {
   display: grid;
-  grid-template-columns: 158px 158px 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: 150px 1fr 260px;
+  grid-template-areas:
+    "video  editor  picked"
+    "strip  strip   picked";
+  gap: 14px;
+  margin-bottom: 20px;
   align-items: start;
 }
+.content-grid > .primary           { grid-area: video; }
+.content-grid > .editor-and-picker { grid-area: editor; }
+.content-grid > .pair-card         { grid-area: picked; }
+.content-grid > .tertiary          { grid-area: strip; margin-bottom: 0; }
 
 .primary {
   background: #1A1814;
@@ -660,13 +672,14 @@ a { color: var(--ink); text-decoration: none; }
 
 .picker-strip {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
+  align-items: flex-start;
   padding-bottom: 6px;
 }
 .picker-strip .candidate {
   flex: 0 0 auto;
-  height: 224px;
+  width: 120px;
   aspect-ratio: 9/16;
   border-radius: 6px;
   overflow: hidden;
@@ -756,7 +769,18 @@ a { color: var(--ink); text-decoration: none; }
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(233, 114, 80, 0.12);
 }
-.field-r textarea { resize: vertical; min-height: 60px; line-height: 1.35; }
+.field-r textarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.4;
+}
+/* Description specifically gets more room + auto-grow with content.
+   field-sizing is Chrome 123+ / Safari 18+; JS fallback in app.js
+   handles older browsers via scrollHeight resize on input. */
+.field-r textarea[data-field="description"] {
+  min-height: 130px;
+  field-sizing: content;
+}
 
 .field-r .tags-edit {
   display: flex; flex-wrap: wrap; gap: 3px;
