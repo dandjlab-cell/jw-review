@@ -47,10 +47,12 @@ const OVERLAY_MAP = {
   "AT|House Tour":          "assets/overlays/at_ht_overlay.png",
   "AT|How To":              "assets/overlays/at_diy_overlay.png",
   "AT|Product Review":      "assets/overlays/at_product_overlay.png",
-  // Stand-ins until dedicated overlays ship:
-  "AT|Before & After":      "assets/overlays/at_diy_overlay.png",      // yellow card (AT DIY) — closest brand stand-in
-  "AT|Promo":               "assets/overlays/at_ht_compilation_overlay.png", // pink AT Compilation
-  "AT|Advice":              "assets/overlays/at_diy_overlay.png",      // yellow card stand-in
+  // Stand-ins until dedicated overlays ship.
+  // Rule (per Dan, 2026-05-13): for AT, anything that isn't Product Review or
+  // House Tour falls back to the yellow DIY card.
+  "AT|Before & After":      "assets/overlays/at_diy_overlay.png",
+  "AT|Promo":               "assets/overlays/at_diy_overlay.png",
+  "AT|Advice":              "assets/overlays/at_diy_overlay.png",
 };
 
 /* Human-readable labels for the manual template-override picker. */
@@ -97,13 +99,13 @@ const OVERLAY_GEOM = {
   // title safe area y=1615..1771 → top:84.115%, bot:7.760%.
   // Card x=132..946 with 50px pad → left:16.85%, right:17.04%.
   "AT|Product Review":  { top: 84.115, bot: 7.76, left: 16.85, right: 17.04, fontMax: 64, fontMin: 44 },
-  // Stand-in formats — borrow geometry from the overlay PNG they share until
-  // dedicated overlays ship. AT|Before & After + AT|Advice reuse AT|How To
-  // (at_diy_overlay.png). AT|Promo reuses AT|Compilation (at_ht_compilation_overlay.png).
-  // Kitchn fallbacks reuse Kitchn|Recipe.
-  "AT|Before & After":  { top: 84.43,  bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
-  "AT|Advice":          { top: 84.43,  bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
-  "AT|Promo":           { top: 84.22,  bot: 7.19, left: 10.56, right: 11.02, fontMax: 64, fontMin: 44 },
+  // Stand-in formats — borrow geometry from the overlay PNG they share.
+  // Per Dan: AT formats that aren't Product Review or House Tour all use
+  // the yellow DIY card (at_diy_overlay.png), so they share AT|How To geom.
+  // Kitchn fallbacks reuse Kitchn|Recipe geometry.
+  "AT|Before & After":  { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  "AT|Advice":          { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  "AT|Promo":           { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
   "Kitchn|How To":         { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
   "Kitchn|Promo":          { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
   "Kitchn|Product Review": { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
