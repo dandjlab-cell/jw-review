@@ -19,7 +19,7 @@ const LS = {
 };
 
 const DEBOUNCE_MS = 500;
-const RENDER_IDLE_MS = 5000;
+const RENDER_IDLE_MS = 30000;   // 30s idle window — render only after the reviewer stops editing
 const RETRY_BACKOFFS_MS = [500, 1500, 5000];
 const POLL_PROGRESS_MS = 30_000;
 
@@ -1114,13 +1114,14 @@ async function loadCandidates(pid, token) {
 }
 
 // Partition state.candidates into:
-//   primary  — Gemini-ranked picks (source="pro") OR raw extracted frames (source="frames")
-//   alts     — Cloudinary brand-curated thumbs (hidden behind Show more)
+//   cloud   — Cloudinary brand-curated thumbs (HIGHEST priority — editor-vetted)
+//   frames  — Gemini-ranked picks (source="pro") OR raw extracted frames (source="frames")
 // Flash + other extract folders are intentionally excluded.
+// Default view shows all cloudinary (up to 6) + top 3 frames; "Show all" expands.
 function partitionCandidates() {
-  const primary = state.candidates.filter(c => c.source === "pro" || c.source === "frames");
-  const alts    = state.candidates.filter(c => c.source === "cloudinary");
-  return { primary, alts };
+  const cloud  = state.candidates.filter(c => c.source === "cloudinary");
+  const frames = state.candidates.filter(c => c.source === "pro" || c.source === "frames");
+  return { cloud, frames };
 }
 
 // Pick an evenly-spaced subset of N items from arr (deterministic, includes
@@ -1141,6 +1142,9 @@ function evenlySpacedSample(arr, n) {
 //   so when both exist the visible count can reach 6.
 const FRAMES_PREVIEW_COUNT = 3;
 
+// How many frames to surface up front when no Codex picks are present.
+const FRAMES_PREVIEW_COUNT = 3;
+
 function paintCandidates() {
   const strip = $("#candidate-strip");
   strip.innerHTML = "";
@@ -1151,33 +1155,49 @@ function paintCandidates() {
     return;
   }
   const pickedFid = state.recipe.candidate_fid;
-  const { primary, alts } = partitionCandidates();
-  // Frames-only collapse: if primary is >FRAMES_PREVIEW_COUNT raw frames and the
-  // user hasn't expanded, show an evenly-spaced sample. Gemini picks (source="pro")
-  // are kept whole since there are only ~12 of them and they're already ranked.
-  const allFrames = primary.every(c => c.source === "frames");
-  const collapseFrames = allFrames && primary.length > FRAMES_PREVIEW_COUNT && !state.candidatesFramesExpanded;
-  // If the picked frame is outside the preview window, auto-expand so the reviewer sees it.
-  if (collapseFrames && pickedFid) {
-    const previewed = evenlySpacedSample(primary, FRAMES_PREVIEW_COUNT);
-    if (!previewed.some(c => c.file_id === pickedFid) && primary.some(c => c.file_id === pickedFid)) {
-      state.candidatesFramesExpanded = true;
+  const { cloud, frames } = partitionCandidates();
+
+  // Render order (per Dan, 2026-05-13 — mirrors the old QC thumb tool):
+  //   1. ALL Cloudinary thumbs (editor-curated; highest priority)
+  //   2. Top frame picks — Codex pick_role primary/alt1/alt2 if present,
+  //      otherwise an evenly-spaced sample of 3 frames
+  //   3. "Show all N frames" button → expands remaining frames below
+
+  // Identify the "top frames" set:
+  //   * If Codex picks present, those are the top 3
+  //   * Else evenly-spaced 3
+  const codexPicks = frames.filter(f => f.pick_role).sort((a, b) => {
+    const order = { primary: 0, alt1: 1, alt2: 2 };
+    return (order[a.pick_role] ?? 9) - (order[b.pick_role] ?? 9);
+  });
+  let topFrames;
+  if (codexPicks.length >= 1) {
+    topFrames = codexPicks.slice(0, 3);
+  } else {
+    topFrames = evenlySpacedSample(frames, FRAMES_PREVIEW_COUNT);
+  }
+  // Always include the user's currently-picked candidate in the top section
+  // so they see what's active without scrolling.
+  if (pickedFid) {
+    const pickedFrame = frames.find(f => f.file_id === pickedFid);
+    if (pickedFrame && !topFrames.includes(pickedFrame)) {
+      topFrames = [pickedFrame, ...topFrames.slice(0, 2)];
     }
   }
-  // If the picked candidate lives in alts, force-expand so the reviewer sees what they picked.
-  const pickedInAlts = alts.some(c => c.file_id === pickedFid);
-  if (pickedInAlts) state.candidatesAltsExpanded = true;
-  const showAlts = !!state.candidatesAltsExpanded;
-  const showAllFrames = !collapseFrames || !!state.candidatesFramesExpanded;
+
+  const remainingFrames = frames.filter(f => !topFrames.includes(f));
+  const isExpanded = !!state.candidatesFramesExpanded;
+  // Auto-expand if the user already picked something hidden in the remaining set.
+  if (!isExpanded && pickedFid && remainingFrames.some(f => f.file_id === pickedFid)) {
+    state.candidatesFramesExpanded = true;
+  }
 
   // Meta line.
-  const visibleTotal = primary.length + alts.length;
-  const proCount    = primary.filter(c => c.source === "pro").length;
-  const framesCount = primary.filter(c => c.source === "frames").length;
-  const parts = [`${visibleTotal} candidates`];
-  if (proCount)    parts.push(`${proCount} Gemini-ranked`);
-  if (framesCount) parts.push(`${framesCount} extracted frames`);
-  if (alts.length) parts.push(`${alts.length} Cloudinary`);
+  const cloudCount = cloud.length;
+  const frameCount = frames.length;
+  const parts = [];
+  if (cloudCount) parts.push(`${cloudCount} Cloudinary`);
+  if (frameCount) parts.push(`${frameCount} frames`);
   meta.textContent = parts.join(" · ");
 
   const renderOne = (c) => {
@@ -1197,36 +1217,32 @@ function paintCandidates() {
       elt.append(el("div", { class: "pick-label alt" }, "Alt 1"));
     } else if (c.pick_role === "alt2") {
       elt.append(el("div", { class: "pick-label alt" }, "Alt 2"));
+    } else if (c.source === "cloudinary") {
+      elt.append(el("div", { class: "gemini-rank cloudinary-tag" }, "Cloudinary"));
     } else if (c.source === "pro" && c.gemini_rank != null) {
       elt.append(el("div", { class: "gemini-rank" }, `#${c.gemini_rank}`));
     } else if (c.source === "frames" && c.gemini_rank != null) {
       elt.append(el("div", { class: "gemini-rank frame-tag" }, `Frame ${c.gemini_rank}`));
-    } else if (c.source === "cloudinary") {
-      elt.append(el("div", { class: "gemini-rank cloudinary-tag" }, "Cloudinary"));
     }
     return elt;
   };
-  const primaryToShow = showAllFrames ? primary : evenlySpacedSample(primary, FRAMES_PREVIEW_COUNT);
-  for (const c of primaryToShow) strip.append(renderOne(c));
-  if (!showAllFrames) {
-    const hidden = primary.length - primaryToShow.length;
-    const more = el("button", {
-      class: "show-more-btn",
-      onclick: () => { state.candidatesFramesExpanded = true; paintCandidates(); },
-    }, `Show all ${primary.length} frames (+${hidden})`);
-    strip.append(more);
-  }
-  if (alts.length) {
-    if (showAlts) {
-      const sep = el("div", { class: "alts-sep" }, "Alternatives");
-      strip.append(sep);
-      for (const c of alts) strip.append(renderOne(c));
-    } else {
+
+  // 1. Cloudinary block (always visible up front)
+  for (const c of cloud) strip.append(renderOne(c));
+  // 2. Top frames block
+  for (const c of topFrames) strip.append(renderOne(c));
+  // 3. "Show all frames" / "Hide" toggle for the remaining frames
+  if (remainingFrames.length) {
+    if (!state.candidatesFramesExpanded) {
       const more = el("button", {
         class: "show-more-btn",
-        onclick: () => { state.candidatesAltsExpanded = true; paintCandidates(); },
-      }, `Show ${alts.length} more`);
+        onclick: () => { state.candidatesFramesExpanded = true; paintCandidates(); },
+      }, `Show all ${frames.length} frames (+${remainingFrames.length})`);
       strip.append(more);
+    } else {
+      const sep = el("div", { class: "alts-sep" }, "All extracted frames");
+      strip.append(sep);
+      for (const c of remainingFrames) strip.append(renderOne(c));
     }
   }
 }
@@ -1242,7 +1258,12 @@ function onCandidateClick(fid) {
   refreshPickedThumb();
   scheduleOverlayLayout();
   paintCandidates();
-  saveDraftAndScheduleRender({ action: "pick_candidate", immediateRender: true });
+  // Save the draft only — no Modal render. The browser-side overlay preview
+  // already shows the new candidate; the canonical Drive thumbnail render is
+  // deferred until the title blurs (via saveDraftAndScheduleRender with
+  // immediateRender:false → debounced) or until Approve fires the push step.
+  api.saveDraft(state.year, state.selectedPid, state.recipe)
+    .catch(e => console.warn("saveDraft (pick_candidate) failed:", e));
 }
 
 /* ─────────────────────── Save logic ─────────────────────── */
