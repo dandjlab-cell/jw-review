@@ -302,6 +302,7 @@ const state = {
   currentRow: null,    // detailed row payload from /api/rows/:y/:p
   candidates: [],      // [{ file_id, gemini_rank, gemini_score }]
   candidatesPid: null, // pid that state.candidates belongs to (drops stale paints)
+  candidatesLoading: false, // true while /api/candidates is in flight
   candidatesAltsExpanded: false,
   candidatesFramesExpanded: false,
   overlayOverride: "", // brand|format key when reviewer manually selected a different template, else ""
@@ -660,6 +661,7 @@ async function loadRow(pid) {
   // Reset per-row async state — drops stale prior-row candidates.
   state.candidates = [];
   state.candidatesPid = null;
+  state.candidatesLoading = true;          // about to fire /api/candidates
   state.candidatesAltsExpanded = false;
   state.candidatesFramesExpanded = false;  // re-collapse frame strip on row change
   state.overlayOverride = "";              // each row starts on Auto
@@ -934,15 +936,17 @@ function paintOverlayPng() {
   const override = state.overlayOverride || "";
   const autoKey = `${state.recipe.brand || ""}|${state.recipe.format || ""}`;
   // Overlay resolution (per Dan, 2026-05-13 — final):
-  //   * AT|House Tour + Tour_City   → 3-field template (LOCATION/SIZE/HOME TYPE)
-  //   * AT|House Tour without city  → AT|Compilation pink (house-tour alt)
-  //   * AT|Before & After + AT|Compilation → ALWAYS AT|Compilation pink,
-  //     so they render visually distinct from 3-field HTs (renders thumb_title
-  //     as a single block, not split by ·).
+  //   * AT|House Tour with a 3-field thumb_title (2+ `·` separators) → 3-field
+  //     template. Reads "City · Sqft · HomeType" directly from the title text
+  //     so rows with empty Tour_City column still render correctly when the
+  //     title is in the canonical shape.
+  //   * AT|House Tour without 3-field title → AT|Compilation pink fallback.
+  //   * AT|Before & After + AT|Compilation → AT|Compilation pink always.
   //   * Other formats unchanged.
   let effectiveAutoKey = autoKey;
-  const tourCity = (state.currentRow?.tour_city || "").trim();
-  if (autoKey === "AT|House Tour" && !tourCity) {
+  const tbt = (state.recipe.thumbnail_title || "").trim();
+  const has3FieldTitle = (tbt.match(/·/g) || []).length >= 2;
+  if (autoKey === "AT|House Tour" && !has3FieldTitle) {
     effectiveAutoKey = "AT|Compilation";
   }
   const key = override || effectiveAutoKey;
@@ -991,11 +995,10 @@ function activeOverlayBrandFormat() {
   }
   let brand = state.recipe.brand;
   let format = state.recipe.format;
-  const tourCity = (state.currentRow?.tour_city || "").trim();
-  // Only HT auto-falls-back when missing Tour_City. B&A and Compilation
-  // stay on their own format (= Compilation overlay) to remain visually
-  // distinct from 3-field House Tour rows.
-  if (brand === "AT" && format === "House Tour" && !tourCity) {
+  // HT auto-falls-back to Compilation only when thumb_title is NOT 3-field shape.
+  const tbt = (state.recipe.thumbnail_title || "").trim();
+  const has3FieldTitle = (tbt.match(/·/g) || []).length >= 2;
+  if (brand === "AT" && format === "House Tour" && !has3FieldTitle) {
     format = "Compilation";
   }
   return { brand, format };
@@ -1121,8 +1124,8 @@ window.addEventListener("resize", fitOverlayDebounced);
 /* ─────────────────────── Candidates ─────────────────────── */
 
 async function loadCandidates(pid, token) {
-  const strip = $("#candidate-strip");
-  strip.innerHTML = `<div class="picker-empty">Loading candidates…</div>`;
+  state.candidatesLoading = true;
+  paintCandidates();
   let cands;
   try {
     const r = await api.candidates(state.year, pid);
@@ -1131,9 +1134,11 @@ async function loadCandidates(pid, token) {
   } catch (e) {
     if (token !== undefined && token !== loadRowToken) return;
     console.error("candidates failed", e);
-    strip.innerHTML = `<div class="picker-empty">Failed to load candidates: ${escapeHtml(e.message || "")}</div>`;
+    state.candidatesLoading = false;
+    $("#candidate-strip").innerHTML = `<div class="picker-empty">Failed to load candidates: ${escapeHtml(e.message || "")}</div>`;
     return;
   }
+  state.candidatesLoading = false;
   state.candidates = cands;
   state.candidatesPid = pid;
   paintCandidates();
@@ -1173,8 +1178,16 @@ function paintCandidates() {
   const strip = $("#candidate-strip");
   strip.innerHTML = "";
   const meta = $("#candidates-meta");
+  if (state.candidatesLoading) {
+    strip.innerHTML = `<div class="picker-empty picker-loading">
+      <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
+      Fetching thumbnail candidates…
+    </div>`;
+    meta.textContent = "loading…";
+    return;
+  }
   if (!state.candidates.length) {
-    strip.innerHTML = `<div class="picker-empty">No candidates returned.</div>`;
+    strip.innerHTML = `<div class="picker-empty">No thumbnail candidates available for this row.</div>`;
     meta.textContent = "0 candidates";
     return;
   }
