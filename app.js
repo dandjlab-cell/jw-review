@@ -48,9 +48,15 @@ const OVERLAY_MAP = {
   "AT|How To":              "assets/overlays/at_diy_overlay.png",
   "AT|Product Review":      "assets/overlays/at_product_overlay.png",
   // Stand-ins until dedicated overlays ship.
-  // Rule (per Dan, 2026-05-13): for AT, anything that isn't Product Review or
-  // House Tour falls back to the yellow DIY card.
-  "AT|Before & After":      "assets/overlays/at_diy_overlay.png",
+  // Rules (per Dan, 2026-05-13):
+  //   - For AT: Product Review + House Tour have dedicated overlays.
+  //   - AT|Before & After uses the Compilation overlay because most B&As are
+  //     house-tour-related (renovation / new place reveal).
+  //   - AT|House Tour rows that LACK the 3-field data (Tour_City etc.) also
+  //     fall back to Compilation at render time — handled dynamically in
+  //     paintOverlayPng, not via this map.
+  //   - Everything else (Promo, Advice, anything unmapped) → AT DIY yellow.
+  "AT|Before & After":      "assets/overlays/at_ht_compilation_overlay.png",
   "AT|Promo":               "assets/overlays/at_diy_overlay.png",
   "AT|Advice":              "assets/overlays/at_diy_overlay.png",
 };
@@ -100,12 +106,12 @@ const OVERLAY_GEOM = {
   // Card x=132..946 with 50px pad → left:16.85%, right:17.04%.
   "AT|Product Review":  { top: 84.115, bot: 7.76, left: 16.85, right: 17.04, fontMax: 64, fontMin: 44 },
   // Stand-in formats — borrow geometry from the overlay PNG they share.
-  // Per Dan: AT formats that aren't Product Review or House Tour all use
-  // the yellow DIY card (at_diy_overlay.png), so they share AT|How To geom.
-  // Kitchn fallbacks reuse Kitchn|Recipe geometry.
-  "AT|Before & After":  { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
-  "AT|Advice":          { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  //   AT|Before & After uses the AT|Compilation pink card (house-tour alt).
+  //   AT|Promo + AT|Advice use the AT|How To yellow card.
+  //   Kitchn fallbacks reuse Kitchn|Recipe geometry.
+  "AT|Before & After":  { top: 84.22, bot: 7.19, left: 10.56, right: 11.02, fontMax: 64, fontMin: 44 },
   "AT|Promo":           { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
+  "AT|Advice":          { top: 84.43, bot: 7.92, left: 17.13, right: 17.31, fontMax: 64, fontMin: 44 },
   "Kitchn|How To":         { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
   "Kitchn|Promo":          { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
   "Kitchn|Product Review": { top: 82.4, bot: 7.7, left: 12.7, right: 12.7, fontMax: 76, fontMin: 56 },
@@ -898,7 +904,16 @@ function paintLinks(row) {
 function paintOverlayPng() {
   const override = state.overlayOverride || "";
   const autoKey = `${state.recipe.brand || ""}|${state.recipe.format || ""}`;
-  const key = override || autoKey;
+  // Dynamic fallback (per Dan, 2026-05-13): AT|House Tour rows that LACK
+  // Tour_City data don't fit the 3-field overlay, so fall through to the
+  // AT|Compilation pink card (the "house tour alt"). Reviewer can still
+  // override via the picker.
+  let effectiveAutoKey = autoKey;
+  const tourCity = (state.currentRow?.tour_city || "").trim();
+  if (autoKey === "AT|House Tour" && !tourCity) {
+    effectiveAutoKey = "AT|Compilation";
+  }
+  const key = override || effectiveAutoKey;
   const overlay = OVERLAY_MAP[key];
   // Reflect override state on the picker.
   const sel = $("#overlay-override");
@@ -907,7 +922,8 @@ function paintOverlayPng() {
     sel.classList.toggle("overridden", !!override);
   }
   const img = $("#overlay-png");
-  const isHT3field = (state.recipe.brand === "AT" && state.recipe.format === "House Tour");
+  // 3-field layout only when we actually have the data + are using the AT HT overlay.
+  const isHT3field = (key === "AT|House Tour");
   if (overlay) {
     img.src = overlay;
     img.hidden = false;
@@ -920,7 +936,9 @@ function paintOverlayPng() {
     $("#overlay-ht-fields").hidden = true;
   }
   // Apply per-overlay title-area geometry (matches the production renderer).
-  const geom = getOverlayGeom(state.recipe.brand, state.recipe.format);
+  // Uses the EFFECTIVE key so the geom matches the overlay PNG that's showing.
+  const [gb, gf] = key.includes("|") ? key.split("|") : [state.recipe.brand, state.recipe.format];
+  const geom = getOverlayGeom(gb, gf);
   const titleEl = $("#overlay-title-text");
   if (titleEl && !isHT3field) {
     titleEl.style.top    = geom.top + "%";
@@ -931,14 +949,22 @@ function paintOverlayPng() {
   if (isHT3field) paintHouseTourFields();
 }
 
-/* Map a brand|format override key back to brand+format for geom lookup. */
+/* Map a brand|format override key back to brand+format for geom lookup.
+   Also applies the same AT|House Tour → Compilation fallback as paintOverlayPng,
+   so fitOverlayText uses the same geometry as the rendered overlay. */
 function activeOverlayBrandFormat() {
   const override = state.overlayOverride || "";
   if (override && override.includes("|")) {
     const [b, f] = override.split("|");
     return { brand: b, format: f };
   }
-  return { brand: state.recipe.brand, format: state.recipe.format };
+  let brand = state.recipe.brand;
+  let format = state.recipe.format;
+  const tourCity = (state.currentRow?.tour_city || "").trim();
+  if (brand === "AT" && format === "House Tour" && !tourCity) {
+    format = "Compilation";
+  }
+  return { brand, format };
 }
 
 /* Split `<location> · <size> · <home_type>` into the three positioned fields.
