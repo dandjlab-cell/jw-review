@@ -1135,14 +1135,11 @@ function evenlySpacedSample(arr, n) {
   return out;
 }
 
-// Default preview count for the candidate strip — only show top picks up front.
-//   3 when ONLY raw frames are available (Codex's top 3 picks once those land;
-//   for now an evenly-spaced sample of 3).
-//   Cloudinary thumbs (curated by the editor) are always shown in addition,
-//   so when both exist the visible count can reach 6.
-const FRAMES_PREVIEW_COUNT = 3;
-
-// How many frames to surface up front when no Codex picks are present.
+// Default preview count for frames in the candidate strip.
+//   3 when no Codex picks are present (evenly-spaced sample).
+//   When Codex picks land, those are used instead (primary + alt1 + alt2).
+//   Cloudinary thumbs (curated by the editor) are always shown above this set,
+//   so when both exist the visible count is ~3 cloud + 3 frames = ~6.
 const FRAMES_PREVIEW_COUNT = 3;
 
 function paintCandidates() {
