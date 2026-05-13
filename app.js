@@ -267,6 +267,8 @@ const state = {
   currentRow: null,    // detailed row payload from /api/rows/:y/:p
   candidates: [],      // [{ file_id, gemini_rank, gemini_score }]
   candidatesPid: null, // pid that state.candidates belongs to (drops stale paints)
+  candidatesAltsExpanded: false,
+  candidatesFramesExpanded: false,
   overlayOverride: "", // brand|format key when reviewer manually selected a different template, else ""
   rowInteractive: false, // true after Phase 2 paint finishes; blocks edits during the gap
   recipe: {            // current in-flight recipe (the live state)
@@ -597,7 +599,8 @@ async function loadRow(pid) {
   state.candidates = [];
   state.candidatesPid = null;
   state.candidatesAltsExpanded = false;
-  state.overlayOverride = "";   // each row starts on Auto
+  state.candidatesFramesExpanded = false;  // re-collapse frame strip on row change
+  state.overlayOverride = "";              // each row starts on Auto
   paintCandidates();
 
   // Phase 1: paint from the row-list summary we already have.
@@ -1049,6 +1052,19 @@ function partitionCandidates() {
   return { primary, alts };
 }
 
+// Pick an evenly-spaced subset of N items from arr (deterministic, includes
+// first + last when N >= 2). Used to show a "top picks" preview of raw frames
+// instead of dumping all 60.
+function evenlySpacedSample(arr, n) {
+  if (arr.length <= n) return arr.slice();
+  const out = [];
+  const step = (arr.length - 1) / (n - 1);
+  for (let i = 0; i < n; i++) out.push(arr[Math.round(i * step)]);
+  return out;
+}
+
+const FRAMES_PREVIEW_COUNT = 6;
+
 function paintCandidates() {
   const strip = $("#candidate-strip");
   strip.innerHTML = "";
@@ -1060,10 +1076,23 @@ function paintCandidates() {
   }
   const pickedFid = state.recipe.candidate_fid;
   const { primary, alts } = partitionCandidates();
+  // Frames-only collapse: if primary is >FRAMES_PREVIEW_COUNT raw frames and the
+  // user hasn't expanded, show an evenly-spaced sample. Gemini picks (source="pro")
+  // are kept whole since there are only ~12 of them and they're already ranked.
+  const allFrames = primary.every(c => c.source === "frames");
+  const collapseFrames = allFrames && primary.length > FRAMES_PREVIEW_COUNT && !state.candidatesFramesExpanded;
+  // If the picked frame is outside the preview window, auto-expand so the reviewer sees it.
+  if (collapseFrames && pickedFid) {
+    const previewed = evenlySpacedSample(primary, FRAMES_PREVIEW_COUNT);
+    if (!previewed.some(c => c.file_id === pickedFid) && primary.some(c => c.file_id === pickedFid)) {
+      state.candidatesFramesExpanded = true;
+    }
+  }
   // If the picked candidate lives in alts, force-expand so the reviewer sees what they picked.
   const pickedInAlts = alts.some(c => c.file_id === pickedFid);
   if (pickedInAlts) state.candidatesAltsExpanded = true;
   const showAlts = !!state.candidatesAltsExpanded;
+  const showAllFrames = !collapseFrames || !!state.candidatesFramesExpanded;
 
   // Meta line.
   const visibleTotal = primary.length + alts.length;
@@ -1093,7 +1122,16 @@ function paintCandidates() {
     }
     return elt;
   };
-  for (const c of primary) strip.append(renderOne(c));
+  const primaryToShow = showAllFrames ? primary : evenlySpacedSample(primary, FRAMES_PREVIEW_COUNT);
+  for (const c of primaryToShow) strip.append(renderOne(c));
+  if (!showAllFrames) {
+    const hidden = primary.length - primaryToShow.length;
+    const more = el("button", {
+      class: "show-more-btn",
+      onclick: () => { state.candidatesFramesExpanded = true; paintCandidates(); },
+    }, `Show all ${primary.length} frames (+${hidden})`);
+    strip.append(more);
+  }
   if (alts.length) {
     if (showAlts) {
       const sep = el("div", { class: "alts-sep" }, "Alternatives");
