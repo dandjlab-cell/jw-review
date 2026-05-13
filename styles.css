@@ -291,6 +291,12 @@ a { color: var(--ink); text-decoration: none; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn.approve { background: var(--good); border-color: var(--good); color: white; font-weight: 600; }
 .btn.approve:hover { filter: brightness(0.92); }
+.btn.approve.approved {
+  background: var(--bg-card);
+  border-color: var(--good);
+  color: var(--good);
+}
+.btn.approve.approved:hover { filter: brightness(0.97); }
 .btn.fix { background: var(--bg-card); border-color: var(--warn); color: var(--warn); }
 .btn.exclude { background: var(--bg-card); border-color: var(--rule); color: var(--ink-muted); }
 

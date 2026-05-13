@@ -257,7 +257,11 @@ const state = {
   year: 2026,
   rows: [],            // [{ pid, title, thumb_fid, duration, format, push_status, review_status, brand }]
   rowIndex: new Map(), // pid → row
-  filters: { status: new Set(["Ready", "Hold", "Uploaded", "Excluded"]), brand: new Set(["Kitchn", "AT"]), format: new Set(["Recipe", "House Tour", "Compilation", "How To"]) },
+  filters: {
+    status: new Set(["Ready", "Hold", "Uploaded", "Excluded"]),
+    brand: new Set(["Kitchn", "AT"]),
+    format: new Set(["Recipe", "House Tour", "How To", "Promo", "Compilation", "Product Review", "Before & After", "Advice"]),
+  },
   search: "",
   selectedPid: null,
   currentRow: null,    // detailed row payload from /api/rows/:y/:p
@@ -348,10 +352,12 @@ function rowPath(year, pid) {
 
 function filtersToQuery() {
   const parts = [];
-  const all = (group, full) => state.filters[group].size === full;
-  if (!all("status", 4)) parts.push(`status=${[...state.filters.status].join(",")}`);
-  if (!all("brand", 2)) parts.push(`brand=${[...state.filters.brand].join(",")}`);
-  if (!all("format", 4)) parts.push(`format=${[...state.filters.format].join(",")}`);
+  // "full" means every default-on value is still in the set — no need to serialize.
+  const FULL = { status: 4, brand: 2, format: 8 };
+  const isFull = (group) => state.filters[group].size === FULL[group];
+  if (!isFull("status")) parts.push(`status=${[...state.filters.status].join(",")}`);
+  if (!isFull("brand"))  parts.push(`brand=${[...state.filters.brand].join(",")}`);
+  if (!isFull("format")) parts.push(`format=${[...state.filters.format].join(",")}`);
   if (state.search) parts.push(`q=${encodeURIComponent(state.search)}`);
   return parts.join("&");
 }
@@ -410,6 +416,24 @@ window.addEventListener("hashchange", handleRoute);
 function paintTopbar() {
   $("#topbar-title").textContent = `JW Seed ${state.year}`;
   document.title = `JW Review · ${state.year}`;
+}
+
+// Re-style the Approve button based on current row's review_status.
+// Approved → button shows "↶ Un-approve" in outline style. Else → green primary.
+function paintApproveButton() {
+  const btn = $("#approve-btn");
+  if (!btn) return;
+  const r = state.rowIndex.get(state.selectedPid) || state.currentRow || {};
+  const isApproved = (r.review_status === "Approved");
+  if (isApproved) {
+    btn.textContent = "↶ Un-approve";
+    btn.classList.add("approved");
+    btn.setAttribute("title", "Currently approved. Click to revert (Review Status + Push Status cleared).");
+  } else {
+    btn.textContent = "✓ Approve & Push to JW";
+    btn.classList.remove("approved");
+    btn.removeAttribute("title");
+  }
 }
 
 function paintProgress() {
@@ -703,6 +727,9 @@ function extractDriveFileIdClient(url) {
 function paintRow() {
   const row = state.currentRow || {};
   const recipe = state.recipe;
+
+  // Approve-button label/style reflects current review_status.
+  paintApproveButton();
 
   // Header
   $("#row-pid").textContent = `${row.pid || "–"} · ${row.format || "–"} · ${row.site || row.brand || "–"}`;
@@ -1397,19 +1424,25 @@ async function doApproveAction(action, reason) {
   try {
     await api.approve(state.year, state.selectedPid, action, reason);
     setPip("saved", "saved");
-    toast(`${action[0].toUpperCase() + action.slice(1)}d`, "success");
+    toast(action === "unapprove" ? "Un-approved" : `${action[0].toUpperCase() + action.slice(1)}d`, "success");
     // Update local row + advance to next.
     const r = state.rowIndex.get(state.selectedPid);
     if (r) {
-      if (action === "approve") { r.review_status = "Approved"; r.push_status = "Ready"; }
-      if (action === "fix")     { r.review_status = "Rejected"; r.push_status = `Hold: ${reason || "needs review"}`; }
-      if (action === "exclude") { r.push_status = "Excluded"; }
+      if (action === "approve")   { r.review_status = "Approved"; r.push_status = "Ready"; }
+      if (action === "unapprove") { r.review_status = "";         r.push_status = ""; }
+      if (action === "fix")       { r.review_status = "Rejected"; r.push_status = `Hold: ${reason || "needs review"}`; }
+      if (action === "exclude")   { r.push_status = "Excluded"; }
       paintRowList();
       paintFilterCounts();
       paintProgress();
     }
-    // Auto-advance.
-    moveSelection(1);
+    if (state.currentRow) {
+      if (action === "approve")   { state.currentRow.review_status = "Approved"; state.currentRow.push_status = "Ready"; }
+      if (action === "unapprove") { state.currentRow.review_status = "";         state.currentRow.push_status = ""; }
+    }
+    paintApproveButton();
+    // Auto-advance only after approve (not after un-approve — user is correcting a mistake).
+    if (action === "approve") moveSelection(1);
   } catch (e) {
     console.warn("approve action failed", e);
     setPip("retry", "save failed");
@@ -1590,7 +1623,10 @@ function bindFieldEvents() {
       } else if (action === "exclude") {
         if (confirm(`Exclude ${state.selectedPid}?`)) doApproveAction("exclude");
       } else {
-        doApproveAction("approve");
+        // Approve toggles: if already approved, send "unapprove"; else "approve".
+        const r = state.rowIndex.get(state.selectedPid) || state.currentRow || {};
+        const isApproved = (r.review_status === "Approved");
+        doApproveAction(isApproved ? "unapprove" : "approve");
       }
     });
   });
