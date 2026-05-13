@@ -325,10 +325,13 @@ const state = {
 // and drops if the user has navigated to a different row in the meantime.
 let loadRowToken = 0;
 
-// Latency HUD (opt-in): enable via DevTools console:
-//   localStorage.setItem("jw-perf-hud", "1"); location.reload();
+// Latency HUD (opt-in for power users only): enable via URL query param
+//   ?perf=1   (not localStorage anymore — the localStorage flag persisted
+//             past intent and surfaced a debug overlay in normal reviews).
+// One-time cleanup of the legacy localStorage flag.
+try { if (typeof localStorage !== "undefined") localStorage.removeItem("jw-perf-hud"); } catch {}
 const PERF = {
-  enabled: (typeof localStorage !== "undefined") && localStorage.getItem("jw-perf-hud") === "1",
+  enabled: (typeof location !== "undefined") && /[?&]perf=1\b/.test(location.search),
   marks: {},
   reset() { this.marks = {}; },
   mark(name) { if (this.enabled) this.marks[name] = performance.now(); },
@@ -516,14 +519,11 @@ function paintFilterCounts() {
 }
 
 function pushStatusBucket(ps) {
-  // Empty push_status = row not yet reviewed/approved. Distinct from "Ready"
-  // (which means an approved row queued for push). Empty maps to "Pending".
-  if (!ps) return "Pending";
-  if (ps === "Ready") return "Ready";
+  if (!ps) return "Ready";
   if (ps.startsWith("Hold")) return "Hold";
   if (ps === "Excluded") return "Excluded";
   if (ps === "Uploaded") return "Uploaded";
-  return "Pending";
+  return "Ready";
 }
 
 function bindFilterClicks() {
@@ -615,7 +615,6 @@ function dotClass(ps) {
   if (b === "Uploaded") return "dot-uploaded";
   if (b === "Excluded") return "dot-excluded";
   if (b === "Hold") return "dot-hold";
-  if (b === "Pending") return "dot-pending";
   return "dot-other";
 }
 
