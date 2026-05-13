@@ -449,6 +449,32 @@ a { color: var(--ink); text-decoration: none; }
   background: rgba(80, 110, 200, 0.85);
   font-weight: 500;
 }
+/* Codex pick-role badges */
+.candidate .pick-label {
+  position: absolute;
+  top: 5px; left: 5px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  z-index: 1;
+}
+.candidate .pick-label.primary {
+  background: var(--good);
+  color: white;
+}
+.candidate .pick-label.alt {
+  background: rgba(43, 138, 77, 0.55);
+  color: white;
+}
+.candidate.has-pick-role {
+  border-color: rgba(43, 138, 77, 0.35);
+}
+.candidate.pick-primary {
+  border-color: var(--good);
+}
 .pair-card .image {
   aspect-ratio: 9/16;
   background: var(--bg-card);

@@ -454,12 +454,14 @@ function paintTopbar() {
 }
 
 // Re-style the Approve button based on current row's review_status.
-// Approved → button shows "↶ Un-approve" in outline style. Else → green primary.
+// "JW APPROVED" → button shows "↶ Un-approve" in outline style. Else → green primary.
+// Also recognizes legacy "Approved" value for any rows not yet migrated.
 function paintApproveButton() {
   const btn = $("#approve-btn");
   if (!btn) return;
   const r = state.rowIndex.get(state.selectedPid) || state.currentRow || {};
-  const isApproved = (r.review_status === "Approved");
+  const rs = (r.review_status || "").toUpperCase();
+  const isApproved = (rs === "JW APPROVED" || rs === "APPROVED");
   if (isApproved) {
     btn.textContent = "↶ Un-approve";
     btn.classList.add("approved");
@@ -1181,14 +1183,22 @@ function paintCandidates() {
 
   const renderOne = (c) => {
     const isPicked = c.file_id === pickedFid;
+    const roleClass = c.pick_role ? " has-pick-role pick-" + c.pick_role : "";
     const elt = el("div", {
-      class: "candidate" + (isPicked ? " picked" : "") + (c.source ? " src-" + c.source : ""),
+      class: "candidate" + (isPicked ? " picked" : "") + (c.source ? " src-" + c.source : "") + roleClass,
       dataset: { fid: c.file_id },
       onclick: () => onCandidateClick(c.file_id),
     });
     elt.append(el("img", { src: api.driveImageUrl(c.file_id, "candidate"), loading: "lazy", alt: "" }));
     if (isPicked) elt.append(el("div", { class: "badge-mini" }, "Picked"));
-    if (c.source === "pro" && c.gemini_rank != null) {
+    // Codex pick role takes priority over source-based labels.
+    if (c.pick_role === "primary") {
+      elt.append(el("div", { class: "pick-label primary" }, "★ Primary"));
+    } else if (c.pick_role === "alt1") {
+      elt.append(el("div", { class: "pick-label alt" }, "Alt 1"));
+    } else if (c.pick_role === "alt2") {
+      elt.append(el("div", { class: "pick-label alt" }, "Alt 2"));
+    } else if (c.source === "pro" && c.gemini_rank != null) {
       elt.append(el("div", { class: "gemini-rank" }, `#${c.gemini_rank}`));
     } else if (c.source === "frames" && c.gemini_rank != null) {
       elt.append(el("div", { class: "gemini-rank frame-tag" }, `Frame ${c.gemini_rank}`));
@@ -1538,20 +1548,22 @@ async function doApproveAction(action, reason) {
     await api.approve(state.year, state.selectedPid, action, reason);
     setPip("saved", "saved");
     toast(action === "unapprove" ? "Un-approved" : `${action[0].toUpperCase() + action.slice(1)}d`, "success");
-    // Update local row + advance to next.
+    // Update local row + advance to next. Values match the worker's new Review Status enum.
     const r = state.rowIndex.get(state.selectedPid);
     if (r) {
-      if (action === "approve")   { r.review_status = "Approved"; r.push_status = "Ready"; }
-      if (action === "unapprove") { r.review_status = "";         r.push_status = ""; }
-      if (action === "fix")       { r.review_status = "Rejected"; r.push_status = `Hold: ${reason || "needs review"}`; }
-      if (action === "exclude")   { r.push_status = "Excluded"; }
+      if (action === "approve")   { r.review_status = "JW APPROVED"; r.push_status = "Ready"; }
+      if (action === "unapprove") { r.review_status = "";            r.push_status = ""; }
+      if (action === "fix")       { r.review_status = "FIX";         r.push_status = `Hold: ${reason || "needs review"}`; }
+      if (action === "exclude")   { r.review_status = "EXCLUDE";     r.push_status = "Excluded"; }
       paintRowList();
       paintFilterCounts();
       paintProgress();
     }
     if (state.currentRow) {
-      if (action === "approve")   { state.currentRow.review_status = "Approved"; state.currentRow.push_status = "Ready"; }
-      if (action === "unapprove") { state.currentRow.review_status = "";         state.currentRow.push_status = ""; }
+      if (action === "approve")   { state.currentRow.review_status = "JW APPROVED"; state.currentRow.push_status = "Ready"; }
+      if (action === "unapprove") { state.currentRow.review_status = "";            state.currentRow.push_status = ""; }
+      if (action === "fix")       { state.currentRow.review_status = "FIX";         state.currentRow.push_status = `Hold: ${reason || "needs review"}`; }
+      if (action === "exclude")   { state.currentRow.review_status = "EXCLUDE";     state.currentRow.push_status = "Excluded"; }
     }
     paintApproveButton();
     // Auto-advance only after approve (not after un-approve — user is correcting a mistake).
@@ -1743,7 +1755,8 @@ function bindFieldEvents() {
       } else {
         // Approve toggles: if already approved, send "unapprove"; else "approve".
         const r = state.rowIndex.get(state.selectedPid) || state.currentRow || {};
-        const isApproved = (r.review_status === "Approved");
+        const rs = (r.review_status || "").toUpperCase();
+        const isApproved = (rs === "JW APPROVED" || rs === "APPROVED");
         doApproveAction(isApproved ? "unapprove" : "approve");
       }
     });
