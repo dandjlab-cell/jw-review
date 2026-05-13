@@ -593,6 +593,7 @@ function paintRowList() {
     } else {
       thumb.append(el("div", { class: "thumb-empty" }, "no img"));
     }
+    const musicPill = musicPillFor(r.license_action, r.music_verdict);
     item.append(
       thumb,
       el("div", { class: "info" },
@@ -603,11 +604,46 @@ function paintRowList() {
         ),
         el("div", { class: "title" }, r.title || "(untitled)"),
         el("div", { class: "meta" }, [r.format, r.duration].filter(Boolean).join(" · ")),
+        musicPill ? el("div", { class: "music-row" }, musicPill) : "",
       ),
       el("span", { class: "dot " + dotClass(r.push_status) })
     );
     list.append(item);
   }
+}
+
+// Music status pill. License Action is the source of truth (swap/keep/add_music/
+// flag_for_review); Music Verdict is the underlying ACR diagnosis. Returns a
+// DOM node OR null when the row has no actionable music state.
+function musicPillFor(licenseAction, musicVerdict) {
+  const la = (licenseAction || "").trim().toLowerCase();
+  const mv = (musicVerdict || "").trim().toLowerCase();
+  // No music license info → no pill (keeps the list clean for the 188 rows
+  // that aren't part of the swap workflow).
+  if (!la && !mv) return null;
+  let cls = "music-pill", label = "", title = "";
+  if (la === "swap") {
+    cls += " is-swap";
+    label = "MUSIC SWAP";
+    title = "Queued / in-progress music swap (WCPM library)";
+  } else if (la === "add_music" || la === "add music") {
+    cls += " is-add";
+    label = "ADD MUSIC";
+    title = "No music in source — needs music added";
+  } else if (la === "keep") {
+    cls += " is-keep";
+    label = "MUSIC OK";
+    title = "Music kept (licensed or in WCPM)";
+  } else if (la === "flag_for_review" || mv === "flagged" || mv === "risky_unknown") {
+    cls += " is-flag";
+    label = mv === "risky_unknown" ? "MUSIC ?" : "FLAGGED";
+    title = "Music ID uncertain — human verify before push";
+  } else if (mv === "not_music" || mv === "no_match") {
+    return null;   // nothing actionable
+  } else {
+    return null;
+  }
+  return el("span", { class: cls, title }, label);
 }
 
 function dotClass(ps) {
