@@ -306,9 +306,22 @@ const state = {
   rowIndex: new Map(), // pid → row
   filters: {
     status: new Set(["REVIEW", "JW APPROVED", "FIX", "EXCLUDE"]),
-    brand: new Set(["Kitchn", "AT"]),
-    format: new Set(["Recipe", "House Tour", "How To", "Promo", "Compilation", "Product Review", "Before & After", "Advice"]),
+    // Brand + format start empty and get hydrated to the full observed universe
+    // by hydrateBrandFormatPills() once rows load. URL params (?brand=…, ?format=…)
+    // override this — applyFiltersFromQuery runs before loadRows. See Bug 2 fix:
+    // a hardcoded list was silently dropping rows whose format/brand wasn't in the
+    // list (e.g. JW schema's "OTHER" format → 26 invisible rows on 2025).
+    brand: new Set(),
+    format: new Set(),
   },
+  filterUniverse: {
+    // Populated by hydrateBrandFormatPills(). Tracks the full set of observed
+    // values per group so filtersToQuery() can detect "all selected" without
+    // a hardcoded count.
+    brand: new Set(),
+    format: new Set(),
+  },
+  filterHydrated: false,  // becomes true after hydrateBrandFormatPills() runs once
   search: "",
   selectedPid: null,
   selectedRow: null,     // sheet row number — unique even for dup-pid variants;
@@ -407,9 +420,14 @@ function rowPath(year, pid) {
 
 function filtersToQuery() {
   const parts = [];
-  // "full" means every default-on value is still in the set — no need to serialize.
-  const FULL = { status: 4, brand: 2, format: 8 };
-  const isFull = (group) => state.filters[group].size === FULL[group];
+  // "full" means every value in the observed universe is still in the set —
+  // no need to serialize. Status has a fixed 4-bucket universe; brand/format
+  // get their universe filled by hydrateBrandFormatPills() once rows load.
+  const STATUS_FULL = 4;
+  const isFull = (group) => {
+    if (group === "status") return state.filters.status.size === STATUS_FULL;
+    return state.filters[group].size === state.filterUniverse[group].size;
+  };
   if (!isFull("status")) parts.push(`status=${[...state.filters.status].join(",")}`);
   if (!isFull("brand"))  parts.push(`brand=${[...state.filters.brand].join(",")}`);
   if (!isFull("format")) parts.push(`format=${[...state.filters.format].join(",")}`);
@@ -536,6 +554,54 @@ function paintFilters() {
   $$("#filter-brand .mini").forEach(m  => m.classList.toggle("on", state.filters.brand.has(m.dataset.value)));
   $$("#filter-format .mini").forEach(m => m.classList.toggle("on", state.filters.format.has(m.dataset.value)));
   paintFilterCounts();
+}
+
+// Hydrate brand + format filter pills from the actual row data. Runs once
+// per loadRows() so any new brand or format value (e.g. JW schema's "OTHER",
+// or a future brand like "Cubby") gets a pill automatically and is never
+// silently dropped from the row list / progress counts. Status pills stay
+// hardcoded in index.html — the 4-bucket spec is stable.
+function hydrateBrandFormatPills() {
+  // No label overrides — display the raw value. (Keeping "AT" as "AT" etc.,
+  // matching the prior hardcoded pills.) Add overrides here if a brand or
+  // format value ever needs a friendlier display label.
+  const LABEL_OVERRIDES = {};
+
+  const observed = { brand: new Set(), format: new Set() };
+  for (const r of state.rows) {
+    if (r.brand)  observed.brand.add(r.brand);
+    if (r.format) observed.format.add(r.format);
+  }
+
+  for (const group of ["brand", "format"]) {
+    state.filterUniverse[group] = new Set(observed[group]);
+
+    // If no URL query pre-populated the filter, default to "all selected".
+    // First-time hydration: state.filters[group] is still empty (initial state)
+    // OR was emptied earlier — fill it with the full observed universe.
+    if (!state.filterHydrated && state.filters[group].size === 0) {
+      state.filters[group] = new Set(observed[group]);
+    }
+    // Stale-value cleanup: if a URL param referenced a value that no longer
+    // exists in the data (year switched, sheet edit), drop it silently.
+    for (const v of [...state.filters[group]]) {
+      if (!observed[group].has(v)) state.filters[group].delete(v);
+    }
+    // Never leave the set empty — that would hide every row. Restore to full
+    // universe if a stale-cleanup left it empty.
+    if (state.filters[group].size === 0) {
+      state.filters[group] = new Set(observed[group]);
+    }
+
+    // Render pills. Sort for stable order; display raw value unless overridden.
+    const sorted = [...observed[group]].sort((a, b) => a.localeCompare(b));
+    const container = $(`#filter-${group}`);
+    container.innerHTML = sorted.map(v => {
+      const label = LABEL_OVERRIDES[v] || v;
+      return `<span class="mini" data-value="${escapeHtml(v)}">${escapeHtml(label)}<span class="num"></span></span>`;
+    }).join("");
+  }
+  state.filterHydrated = true;
 }
 
 function paintFilterCounts() {
@@ -721,8 +787,12 @@ async function loadRows() {
     state.rows = (r && r.rows) || [];
     state.rowIndex.clear();
     for (const row of state.rows) state.rowIndex.set(row.pid, row);
+    // Build pills from observed brand/format values BEFORE first paint —
+    // paintFilters() / paintFilterCounts() / filteredRows() all assume the
+    // pill DOM matches the actual data.
+    hydrateBrandFormatPills();
+    paintFilters();
     paintRowList();
-    paintFilterCounts();
     paintProgress();
   } catch (e) {
     console.error("loadRows failed", e);
