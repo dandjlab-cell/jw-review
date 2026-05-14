@@ -512,7 +512,11 @@ function paintApproveButton() {
 }
 
 function paintProgress() {
-  const all = filteredRows();
+  // Progress shows OVERALL state of the year, independent of which filters
+  // the reviewer has clicked. If we used filteredRows() here, toggling the
+  // "Review" pill (showing only un-reviewed rows) would always read 0/N
+  // because approved rows are bucketed elsewhere.
+  const all = state.rows;
   // Review-status enum was migrated in 2026-05 from "Approved" -> "JW APPROVED".
   // Count both for back-compat with rows still on the old enum during transition.
   const done = all.filter(r =>
