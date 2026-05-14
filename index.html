@@ -56,14 +56,14 @@
     </div>
     <div class="filter-block">
       <h2>Brand (Site)</h2>
-      <!-- Pills rendered dynamically from observed row data — see hydrateBrandFormatPills() in app.js -->
+      <!-- Pills rendered dynamically from observed row data — see hydrateBrandPills() in app.js -->
       <div class="filter-pills" data-filter-group="brand" id="filter-brand"></div>
     </div>
-    <div class="filter-block">
-      <h2>Format</h2>
-      <!-- Pills rendered dynamically from observed row data — see hydrateBrandFormatPills() in app.js -->
-      <div class="filter-pills" data-filter-group="format" id="filter-format"></div>
-    </div>
+    <!-- Format is NOT a sidebar filter: it's an editorial JW custom_param
+         (right panel dropdown) that reviewers actively author and may fix.
+         Filtering by it would hide misclassified rows under the wrong bucket
+         and imply the value is settled when it's not. -->
+
 
     <div class="row-list" id="row-list">
       <div class="row-list-empty">Loading rows…</div>

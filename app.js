@@ -306,22 +306,18 @@ const state = {
   rowIndex: new Map(), // pid → row
   filters: {
     status: new Set(["REVIEW", "JW APPROVED", "FIX", "EXCLUDE"]),
-    // Brand + format start empty and get hydrated to the full observed universe
-    // by hydrateBrandFormatPills() once rows load. URL params (?brand=…, ?format=…)
-    // override this — applyFiltersFromQuery runs before loadRows. See Bug 2 fix:
-    // a hardcoded list was silently dropping rows whose format/brand wasn't in the
-    // list (e.g. JW schema's "OTHER" format → 26 invisible rows on 2025).
+    // Brand starts empty and gets hydrated to the full observed universe by
+    // hydrateBrandPills() once rows load. URL params (?brand=…) override.
+    // Format is intentionally NOT a sidebar filter — it's an editorial param
+    // reviewers may fix; filtering by it would hide misclassified rows.
     brand: new Set(),
-    format: new Set(),
   },
   filterUniverse: {
-    // Populated by hydrateBrandFormatPills(). Tracks the full set of observed
-    // values per group so filtersToQuery() can detect "all selected" without
-    // a hardcoded count.
+    // Populated by hydrateBrandPills(). Tracks the full set of observed brand
+    // values so filtersToQuery() can detect "all selected" without a hardcoded count.
     brand: new Set(),
-    format: new Set(),
   },
-  filterHydrated: false,  // becomes true after hydrateBrandFormatPills() runs once
+  filterHydrated: false,  // becomes true after hydrateBrandPills() runs once
   search: "",
   selectedPid: null,
   selectedRow: null,     // sheet row number — unique even for dup-pid variants;
@@ -421,8 +417,8 @@ function rowPath(year, pid) {
 function filtersToQuery() {
   const parts = [];
   // "full" means every value in the observed universe is still in the set —
-  // no need to serialize. Status has a fixed 4-bucket universe; brand/format
-  // get their universe filled by hydrateBrandFormatPills() once rows load.
+  // no need to serialize. Status has a fixed 4-bucket universe; brand gets
+  // its universe filled by hydrateBrandPills() once rows load.
   const STATUS_FULL = 4;
   const isFull = (group) => {
     if (group === "status") return state.filters.status.size === STATUS_FULL;
@@ -430,7 +426,6 @@ function filtersToQuery() {
   };
   if (!isFull("status")) parts.push(`status=${[...state.filters.status].join(",")}`);
   if (!isFull("brand"))  parts.push(`brand=${[...state.filters.brand].join(",")}`);
-  if (!isFull("format")) parts.push(`format=${[...state.filters.format].join(",")}`);
   if (state.search) parts.push(`q=${encodeURIComponent(state.search)}`);
   return parts.join("&");
 }
@@ -443,7 +438,9 @@ function applyFiltersFromQuery(query) {
   };
   set("status", query.get("status"));
   set("brand", query.get("brand"));
-  set("format", query.get("format"));
+  // Legacy ?format=... query params from before Format was removed as a
+  // sidebar filter are silently ignored. Reviewers can still see Format in
+  // the right panel + edit it there.
   if (query.get("q")) state.search = query.get("q");
 }
 
@@ -552,69 +549,64 @@ function paintProgress() {
 function paintFilters() {
   $$("#filter-status .mini").forEach(m => m.classList.toggle("on", state.filters.status.has(m.dataset.value)));
   $$("#filter-brand .mini").forEach(m  => m.classList.toggle("on", state.filters.brand.has(m.dataset.value)));
-  $$("#filter-format .mini").forEach(m => m.classList.toggle("on", state.filters.format.has(m.dataset.value)));
   paintFilterCounts();
 }
 
-// Hydrate brand + format filter pills from the actual row data. Runs once
-// per loadRows() so any new brand or format value (e.g. JW schema's "OTHER",
-// or a future brand like "Cubby") gets a pill automatically and is never
-// silently dropped from the row list / progress counts. Status pills stay
-// hardcoded in index.html — the 4-bucket spec is stable.
-function hydrateBrandFormatPills() {
+// Hydrate the brand filter pills from the actual row data. Runs once per
+// loadRows() so any new brand (e.g. a future "Cubby" or "DT") gets a pill
+// automatically and is never silently dropped from the row list / progress
+// counts. Status pills stay hardcoded in index.html — the 4-bucket spec is
+// stable. Format is intentionally NOT a sidebar filter (editorial param).
+function hydrateBrandPills() {
   // No label overrides — display the raw value. (Keeping "AT" as "AT" etc.,
-  // matching the prior hardcoded pills.) Add overrides here if a brand or
-  // format value ever needs a friendlier display label.
+  // matching the prior hardcoded pills.) Add overrides here if a brand value
+  // ever needs a friendlier display label.
   const LABEL_OVERRIDES = {};
 
-  const observed = { brand: new Set(), format: new Set() };
+  const observed = new Set();
   for (const r of state.rows) {
-    if (r.brand)  observed.brand.add(r.brand);
-    if (r.format) observed.format.add(r.format);
+    if (r.brand) observed.add(r.brand);
   }
 
-  for (const group of ["brand", "format"]) {
-    state.filterUniverse[group] = new Set(observed[group]);
+  state.filterUniverse.brand = new Set(observed);
 
-    // If no URL query pre-populated the filter, default to "all selected".
-    // First-time hydration: state.filters[group] is still empty (initial state)
-    // OR was emptied earlier — fill it with the full observed universe.
-    if (!state.filterHydrated && state.filters[group].size === 0) {
-      state.filters[group] = new Set(observed[group]);
-    }
-    // Stale-value cleanup: if a URL param referenced a value that no longer
-    // exists in the data (year switched, sheet edit), drop it silently.
-    for (const v of [...state.filters[group]]) {
-      if (!observed[group].has(v)) state.filters[group].delete(v);
-    }
-    // Never leave the set empty — that would hide every row. Restore to full
-    // universe if a stale-cleanup left it empty.
-    if (state.filters[group].size === 0) {
-      state.filters[group] = new Set(observed[group]);
-    }
-
-    // Render pills. Sort for stable order; display raw value unless overridden.
-    const sorted = [...observed[group]].sort((a, b) => a.localeCompare(b));
-    const container = $(`#filter-${group}`);
-    container.innerHTML = sorted.map(v => {
-      const label = LABEL_OVERRIDES[v] || v;
-      return `<span class="mini" data-value="${escapeHtml(v)}">${escapeHtml(label)}<span class="num"></span></span>`;
-    }).join("");
+  // If no URL query pre-populated the filter, default to "all selected".
+  // First-time hydration: state.filters.brand is still empty (initial state)
+  // OR was emptied earlier — fill it with the full observed universe.
+  if (!state.filterHydrated && state.filters.brand.size === 0) {
+    state.filters.brand = new Set(observed);
   }
+  // Stale-value cleanup: if a URL param referenced a brand that no longer
+  // exists in the data (year switched, sheet edit), drop it silently.
+  for (const v of [...state.filters.brand]) {
+    if (!observed.has(v)) state.filters.brand.delete(v);
+  }
+  // Never leave the set empty — that would hide every row. Restore to full
+  // universe if a stale-cleanup left it empty.
+  if (state.filters.brand.size === 0) {
+    state.filters.brand = new Set(observed);
+  }
+
+  // Render pills. Sort for stable order; display raw value unless overridden.
+  const sorted = [...observed].sort((a, b) => a.localeCompare(b));
+  const container = $("#filter-brand");
+  container.innerHTML = sorted.map(v => {
+    const label = LABEL_OVERRIDES[v] || v;
+    return `<span class="mini" data-value="${escapeHtml(v)}">${escapeHtml(label)}<span class="num"></span></span>`;
+  }).join("");
+
   state.filterHydrated = true;
 }
 
 function paintFilterCounts() {
-  const counts = { status: {}, brand: {}, format: {} };
+  const counts = { status: {}, brand: {} };
   for (const r of state.rows) {
     const rs = reviewStatusBucket(r.review_status);
     counts.status[rs] = (counts.status[rs] || 0) + 1;
-    if (r.brand)  counts.brand[r.brand]   = (counts.brand[r.brand]   || 0) + 1;
-    if (r.format) counts.format[r.format] = (counts.format[r.format] || 0) + 1;
+    if (r.brand) counts.brand[r.brand] = (counts.brand[r.brand] || 0) + 1;
   }
   for (const m of $$("#filter-status .mini")) m.querySelector(".num").textContent = counts.status[m.dataset.value] || 0;
   for (const m of $$("#filter-brand .mini"))  m.querySelector(".num").textContent = counts.brand[m.dataset.value]  || 0;
-  for (const m of $$("#filter-format .mini")) m.querySelector(".num").textContent = counts.format[m.dataset.value] || 0;
 }
 
 function pushStatusBucket(ps) {
@@ -639,7 +631,9 @@ function reviewStatusBucket(rs) {
 }
 
 function bindFilterClicks() {
-  for (const group of ["status", "brand", "format"]) {
+  // status + brand only — format is intentionally not a sidebar filter
+  // (editorial JW custom_param, see hydrateBrandPills comment).
+  for (const group of ["status", "brand"]) {
     $(`#filter-${group}`).addEventListener("click", e => {
       const m = e.target.closest(".mini");
       if (!m) return;
@@ -661,8 +655,8 @@ function filteredRows() {
   const q = state.search.toLowerCase().trim();
   return state.rows.filter(r => {
     if (!state.filters.status.has(reviewStatusBucket(r.review_status))) return false;
-    if (r.brand  && !state.filters.brand.has(r.brand))   return false;
-    if (r.format && !state.filters.format.has(r.format)) return false;
+    if (r.brand && !state.filters.brand.has(r.brand)) return false;
+    // Format is intentionally NOT filtered here — see hydrateBrandPills comment.
     if (q) {
       const hay = `${r.pid} ${r.title} ${r.talent_name || ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
@@ -787,10 +781,10 @@ async function loadRows() {
     state.rows = (r && r.rows) || [];
     state.rowIndex.clear();
     for (const row of state.rows) state.rowIndex.set(row.pid, row);
-    // Build pills from observed brand/format values BEFORE first paint —
+    // Build brand pills from observed values BEFORE first paint —
     // paintFilters() / paintFilterCounts() / filteredRows() all assume the
     // pill DOM matches the actual data.
-    hydrateBrandFormatPills();
+    hydrateBrandPills();
     paintFilters();
     paintRowList();
     paintProgress();
